@@ -12,6 +12,7 @@ import {
 import { addDays, addHours, addMinutes, format, set } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
+import { useTimeSlots } from "./components/hooks/useTimeSlots";
 
 // PCタイプの定義
 type PC = {
@@ -61,24 +62,8 @@ export default function Home() {
 	// グリッドのref
 	const gridRef = useRef<HTMLDivElement>(null);
 
-	// 10分単位のタイムスロットを生成（0:00-23:50）- 24時間対応
-	const generateTimeSlots = (): TimeSlot[] => {
-		const slots: TimeSlot[] = [];
-		for (let hour = 0; hour <= 23; hour++) {
-			for (let minute = 0; minute < 60; minute += 10) {
-				slots.push({ hour, minute });
-			}
-		}
-		return slots;
-	};
-
-	// 1時間単位の時間ヘッダーを生成（0-23時）
-	const generateHourHeaders = (): number[] => {
-		return Array.from({ length: 24 }, (_, i) => i); // 0時から23時まで
-	};
-
-	const timeSlots = generateTimeSlots();
-	const hourHeaders = generateHourHeaders();
+	// 時間スロットと時間ヘッダーを生成
+	const { timeSlots, hourHeaders } = useTimeSlots();
 
 	// セルをクリック/タッチ開始したときの処理
 	const handleCellMouseDown = (
