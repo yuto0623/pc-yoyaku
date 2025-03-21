@@ -12,6 +12,7 @@ import {
 import { addDays, addHours, addMinutes, format, set } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
+import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useTimeSlots } from "./components/hooks/useTimeSlots";
 
 // PCタイプの定義
@@ -385,20 +386,24 @@ export default function Home() {
 										}}
 									>
 										{timeSlots.map((slot, slotIndex) => (
-											<div
-												key={`${pc.id}-${slot.hour.toString().padStart(2, "0")}:${slot.minute.toString().padStart(2, "0")}`}
-												className={`w-[10px] h-full flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
-												data-pc-id={pc.id}
-												data-index={slotIndex}
-												onMouseDown={() =>
-													handleCellMouseDown(pc.id, slotIndex, pcIndex)
+											<TimeSlotCell
+												key={`${pc.id}-${slot.hour}-${slot.minute}`}
+												pcId={pc.id}
+												hour={slot.hour}
+												minute={slot.minute}
+												slotIndex={slotIndex}
+												pcIndex={pcIndex}
+												isSelected={
+													getCellBackgroundColor(
+														pc.id,
+														slot.hour,
+														slot.minute,
+													) === "bg-blue-200 dark:bg-blue-800"
 												}
-												onMouseEnter={() =>
-													handleCellMouseEnter(pc.id, slotIndex)
-												}
-												onTouchStart={() =>
-													handleTouchStart(pc.id, slotIndex, pcIndex)
-												}
+												isHourStart={slot.minute === 0}
+												onMouseDown={handleCellMouseDown}
+												onMouseEnter={handleCellMouseEnter}
+												onTouchStart={handleTouchStart}
 											/>
 										))}
 									</div>
