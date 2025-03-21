@@ -14,6 +14,7 @@ import { ja } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useTimeSlots } from "./components/hooks/useTimeSlots";
+import { useTouchDrag } from "./components/hooks/useTouchDrag";
 
 // PCタイプの定義
 type PC = {
@@ -55,16 +56,18 @@ export default function Home() {
 		timeSlotIndex: number;
 	} | null>(null);
 
-	// 長押し検出のための状態
-	const [isLongPressing, setIsLongPressing] = useState(false);
-	const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-	const longPressDuration = 500; // 長押し検出の時間（ミリ秒）
-
-	// グリッドのref
-	const gridRef = useRef<HTMLDivElement>(null);
-
 	// 時間スロットと時間ヘッダーを生成
 	const { timeSlots, hourHeaders } = useTimeSlots();
+
+	// タッチドラッグのカスタムフック
+	const {
+		isLongPressing,
+		gridRef,
+		startLongPress,
+		cancelLongPress,
+		endLongPress,
+		preventScrollDuringDrag,
+	} = useTouchDrag();
 
 	// セルをクリック/タッチ開始したときの処理
 	const handleCellMouseDown = (
@@ -94,38 +97,15 @@ export default function Home() {
 		timeSlotIndex: number,
 		pcIndex: number,
 	) => {
-		// すでに設定されているタイマーをクリア
-		if (longPressTimerRef.current) {
-			clearTimeout(longPressTimerRef.current);
-		}
-
-		// 長押し検出のためのタイマーを設定
-		longPressTimerRef.current = setTimeout(() => {
-			setIsLongPressing(true);
+		startLongPress(() => {
 			// 長押しが検出されたら選択を開始
 			handleCellMouseDown(pcId, timeSlotIndex, pcIndex);
-
-			// 長押し検出時にbodyのスクロールを無効化（クライアント側のみ）
-			if (typeof document !== "undefined") {
-				document.body.style.overflow = "hidden";
-				document.body.style.touchAction = "none";
-			}
-		}, longPressDuration);
+		});
 	};
 
 	// タッチキャンセル時の処理
 	const handleTouchCancel = () => {
-		if (longPressTimerRef.current) {
-			clearTimeout(longPressTimerRef.current);
-			longPressTimerRef.current = null;
-		}
-		setIsLongPressing(false);
-
-		// スタイルのリセット（クライアント側のみ）
-		if (typeof document !== "undefined") {
-			document.body.style.overflow = "";
-			document.body.style.touchAction = "";
-		}
+		cancelLongPress();
 	};
 
 	// ドラッグ中の処理
@@ -226,63 +206,26 @@ export default function Home() {
 
 	// タッチ終了時の処理
 	const handleTouchEnd = () => {
-		// 長押しタイマーをクリア
-		if (longPressTimerRef.current) {
-			clearTimeout(longPressTimerRef.current);
-			longPressTimerRef.current = null;
-		}
-
-		// 長押し状態をリセット
-		setIsLongPressing(false);
-
-		// スクロールを再度有効化（クライアント側のみ）
-		if (typeof document !== "undefined") {
-			document.body.style.overflow = "";
-			document.body.style.touchAction = "";
-		}
-
-		// 通常のドラッグ終了処理
-		handleMouseUp();
+		endLongPress(() => {
+			// 通常のドラッグ終了処理
+			handleMouseUp();
+		});
 	};
 
-	// 全体のtouchMoveイベントを監視して、ドラッグ中のスクロールを防止
-	const preventScrollDuringDrag = (e: TouchEvent) => {
-		if (isLongPressing && isDragging) {
-			e.preventDefault();
-		}
-	};
-
-	// ドラッグ操作のイベントリスナー設定
-	// クライアント側のみの処理をuseEffect内に移動
+	// イベントリスナー設定
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
-		// パッシブでないイベントリスナーを追加（スクロールを防止するため）
-		document.addEventListener("touchmove", preventScrollDuringDrag, {
-			passive: false,
-		});
-
 		window.addEventListener("mouseup", handleMouseUp);
 		window.addEventListener("touchend", handleTouchEnd);
 		window.addEventListener("touchcancel", handleTouchCancel);
 
 		return () => {
-			document.removeEventListener("touchmove", preventScrollDuringDrag);
 			window.removeEventListener("mouseup", handleMouseUp);
 			window.removeEventListener("touchend", handleTouchEnd);
 			window.removeEventListener("touchcancel", handleTouchCancel);
-
-			// コンポーネントのアンマウント時にタイマーをクリア
-			if (longPressTimerRef.current) {
-				clearTimeout(longPressTimerRef.current);
-			}
-
-			// スタイルをリセット
-			document.body.style.overflow = "";
-			document.body.style.touchAction = "";
 		};
-	}, [isDragging, isLongPressing, selection]);
+	}, [isDragging, selection]);
 
-	// 以下は変更なし...
 	const getCellBackgroundColor = (
 		pcId: string,
 		hour: number,
