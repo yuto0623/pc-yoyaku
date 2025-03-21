@@ -44,6 +44,11 @@ export default function Home() {
 		timeSlotIndex: number;
 	} | null>(null);
 
+	// 長押し検出のための状態
+	const [isLongPressing, setIsLongPressing] = useState(false);
+	const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+	const longPressDuration = 500; // 長押し検出の時間（ミリ秒）
+
 	// グリッドのref
 	const gridRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +91,46 @@ export default function Home() {
 		});
 		setIsDragging(true);
 		setDragStartCell({ pcIndex, timeSlotIndex });
+	};
+
+	// 長押しを開始する処理
+	const handleTouchStart = (
+		pcId: string,
+		timeSlotIndex: number,
+		pcIndex: number,
+	) => {
+		// すでに設定されているタイマーをクリア
+		if (longPressTimerRef.current) {
+			clearTimeout(longPressTimerRef.current);
+		}
+
+		// 長押し検出のためのタイマーを設定
+		longPressTimerRef.current = setTimeout(() => {
+			setIsLongPressing(true);
+			// 長押しが検出されたら選択を開始
+			handleCellMouseDown(pcId, timeSlotIndex, pcIndex);
+
+			// 長押し検出時にbodyのスクロールを無効化（クライアント側のみ）
+			if (typeof document !== "undefined") {
+				document.body.style.overflow = "hidden";
+				document.body.style.touchAction = "none";
+			}
+		}, longPressDuration);
+	};
+
+	// タッチキャンセル時の処理
+	const handleTouchCancel = () => {
+		if (longPressTimerRef.current) {
+			clearTimeout(longPressTimerRef.current);
+			longPressTimerRef.current = null;
+		}
+		setIsLongPressing(false);
+
+		// スタイルのリセット（クライアント側のみ）
+		if (typeof document !== "undefined") {
+			document.body.style.overflow = "";
+			document.body.style.touchAction = "";
+		}
 	};
 
 	// ドラッグ中の処理
@@ -134,14 +179,20 @@ export default function Home() {
 
 	// タッチ移動時の処理（スマートフォン用）
 	const handleTouchMove = (event: React.TouchEvent) => {
-		if (!isDragging || !selection.pcId || !dragStartCell || !gridRef.current) {
+		// 長押しが検出されていない場合は処理しない
+		if (
+			!isLongPressing ||
+			!isDragging ||
+			!selection.pcId ||
+			!dragStartCell ||
+			!gridRef.current
+		) {
 			return;
 		}
 
 		event.preventDefault(); // スクロールを防止
 
 		const touch = event.touches[0];
-		const gridRect = gridRef.current.getBoundingClientRect();
 
 		// タッチ位置の要素を取得
 		const elementsAtTouch = document.elementsFromPoint(
@@ -178,18 +229,65 @@ export default function Home() {
 		setIsDragging(false);
 	};
 
+	// タッチ終了時の処理
+	const handleTouchEnd = () => {
+		// 長押しタイマーをクリア
+		if (longPressTimerRef.current) {
+			clearTimeout(longPressTimerRef.current);
+			longPressTimerRef.current = null;
+		}
+
+		// 長押し状態をリセット
+		setIsLongPressing(false);
+
+		// スクロールを再度有効化（クライアント側のみ）
+		if (typeof document !== "undefined") {
+			document.body.style.overflow = "";
+			document.body.style.touchAction = "";
+		}
+
+		// 通常のドラッグ終了処理
+		handleMouseUp();
+	};
+
+	// 全体のtouchMoveイベントを監視して、ドラッグ中のスクロールを防止
+	const preventScrollDuringDrag = (e: TouchEvent) => {
+		if (isLongPressing && isDragging) {
+			e.preventDefault();
+		}
+	};
+
 	// ドラッグ操作のイベントリスナー設定
+	// クライアント側のみの処理をuseEffect内に移動
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
+		// パッシブでないイベントリスナーを追加（スクロールを防止するため）
+		document.addEventListener("touchmove", preventScrollDuringDrag, {
+			passive: false,
+		});
+
 		window.addEventListener("mouseup", handleMouseUp);
-		window.addEventListener("touchend", handleMouseUp);
+		window.addEventListener("touchend", handleTouchEnd);
+		window.addEventListener("touchcancel", handleTouchCancel);
 
 		return () => {
+			document.removeEventListener("touchmove", preventScrollDuringDrag);
 			window.removeEventListener("mouseup", handleMouseUp);
-			window.removeEventListener("touchend", handleMouseUp);
-		};
-	});
+			window.removeEventListener("touchend", handleTouchEnd);
+			window.removeEventListener("touchcancel", handleTouchCancel);
 
-	// 時間セルの背景色を決定する関数
+			// コンポーネントのアンマウント時にタイマーをクリア
+			if (longPressTimerRef.current) {
+				clearTimeout(longPressTimerRef.current);
+			}
+
+			// スタイルをリセット
+			document.body.style.overflow = "";
+			document.body.style.touchAction = "";
+		};
+	}, [isDragging, isLongPressing, selection]);
+
+	// 以下は変更なし...
 	const getCellBackgroundColor = (
 		pcId: string,
 		hour: number,
@@ -204,11 +302,9 @@ export default function Home() {
 		return "bg-white dark:bg-gray-800";
 	};
 
-	// 日付変更時の処理
 	const handleDateChange = (newDate: Date | undefined) => {
 		if (newDate) {
 			setDate(newDate);
-			// 日付が変わったら選択をリセット
 			setSelection({
 				pcId: null,
 				startTime: null,
@@ -217,7 +313,6 @@ export default function Home() {
 		}
 	};
 
-	// 予約を確定する処理
 	const confirmReservation = () => {
 		if (!selection.pcId || !selection.startTime || !selection.endTime) return;
 
@@ -227,10 +322,6 @@ export default function Home() {
 			`予約を確定します: ${selectedPc?.name}, ${format(selection.startTime, "yyyy/MM/dd HH:mm")} - ${format(selection.endTime, "HH:mm")}`,
 		);
 
-		// ここでAPIを呼び出して予約を保存する処理を追加
-		// 例: saveReservation(selection);
-
-		// 予約後に選択をリセット
 		setSelection({
 			pcId: null,
 			startTime: null,
@@ -262,7 +353,7 @@ export default function Home() {
 
 					{/* スマホ用の説明 */}
 					<p className="text-sm text-gray-500 mb-2 md:hidden">
-						長押し＆ドラッグで時間を選択できます
+						長押し（0.5秒）してからドラッグで時間を選択できます
 					</p>
 
 					<div className="overflow-x-auto" ref={gridRef}>
@@ -291,11 +382,18 @@ export default function Home() {
 									</div>
 
 									{/* 時間セル - 10分単位 */}
-									<div className="flex" onTouchMove={handleTouchMove}>
+									<div
+										className="flex"
+										onTouchMove={handleTouchMove}
+										onContextMenu={(e) => {
+											// 長押し中に右クリックメニューが出るのを防止
+											if (isLongPressing) e.preventDefault();
+										}}
+									>
 										{timeSlots.map((slot, slotIndex) => (
 											<div
 												key={`${pc.id}-${slot.hour.toString().padStart(2, "0")}:${slot.minute.toString().padStart(2, "0")}`}
-												className={`w-[10px] h-full flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
+												className={`w-[10px] h-10 flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
 												data-pc-id={pc.id}
 												data-index={slotIndex}
 												onMouseDown={() =>
@@ -305,7 +403,7 @@ export default function Home() {
 													handleCellMouseEnter(pc.id, slotIndex)
 												}
 												onTouchStart={() =>
-													handleCellMouseDown(pc.id, slotIndex, pcIndex)
+													handleTouchStart(pc.id, slotIndex, pcIndex)
 												}
 											/>
 										))}
