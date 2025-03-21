@@ -4,15 +4,16 @@ import { Calendar } from "@/components/ui/calendar";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardFooter,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { addDays, addHours, addMinutes, format, set } from "date-fns";
+import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
+import { useState } from "react";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
+import { useTimeSelection } from "./components/hooks/useTimeSelection";
 import { useTimeSlots } from "./components/hooks/useTimeSlots";
 import { useTouchDrag } from "./components/hooks/useTouchDrag";
 
@@ -22,19 +23,6 @@ type PC = {
 	name: string;
 };
 
-// 予約時間帯選択のための状態タイプ
-type TimeSelection = {
-	pcId: string | null;
-	startTime: Date | null;
-	endTime: Date | null;
-};
-
-// 時間スロットの型定義
-type TimeSlot = {
-	hour: number;
-	minute: number;
-};
-
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
 	const [pcs, setPcs] = useState<PC[]>([
@@ -42,22 +30,20 @@ export default function Home() {
 		{ id: "2", name: "2号機（黒）ダイナブック" },
 	]);
 
-	// 時間選択の状態
-	const [selection, setSelection] = useState<TimeSelection>({
-		pcId: null,
-		startTime: null,
-		endTime: null,
-	});
-
-	// ドラッグ操作のための状態
-	const [isDragging, setIsDragging] = useState(false);
-	const [dragStartCell, setDragStartCell] = useState<{
-		pcIndex: number;
-		timeSlotIndex: number;
-	} | null>(null);
-
 	// 時間スロットと時間ヘッダーを生成
 	const { timeSlots, hourHeaders } = useTimeSlots();
+
+	// 時間選択のカスタムフック
+	const {
+		selection,
+		isDragging,
+		dragStartCell,
+		startSelection,
+		updateSelection,
+		endSelection,
+		resetSelection,
+		isCellSelected,
+	} = useTimeSelection(date, timeSlots);
 
 	// タッチドラッグのカスタムフック
 	const {
@@ -75,20 +61,7 @@ export default function Home() {
 		timeSlotIndex: number,
 		pcIndex: number,
 	) => {
-		const slot = timeSlots[timeSlotIndex];
-		const startTime = set(date, {
-			hours: slot.hour,
-			minutes: slot.minute,
-			seconds: 0,
-		});
-
-		setSelection({
-			pcId,
-			startTime,
-			endTime: addMinutes(startTime, 10),
-		});
-		setIsDragging(true);
-		setDragStartCell({ pcIndex, timeSlotIndex });
+		startSelection(pcId, timeSlotIndex, pcIndex);
 	};
 
 	// 長押しを開始する処理
@@ -110,46 +83,7 @@ export default function Home() {
 
 	// ドラッグ中の処理
 	const handleCellMouseEnter = (pcId: string, timeSlotIndex: number) => {
-		if (isDragging && selection.pcId === pcId && dragStartCell) {
-			const startSlot = timeSlots[dragStartCell.timeSlotIndex];
-			const currentSlot = timeSlots[timeSlotIndex];
-
-			// 日付に基づいて時間を設定
-			const baseTime = set(date, {
-				hours: startSlot.hour,
-				minutes: startSlot.minute,
-				seconds: 0,
-			});
-
-			// ドラッグ方向に応じて開始時間と終了時間を設定
-			if (timeSlotIndex > dragStartCell.timeSlotIndex) {
-				// 右方向へのドラッグ
-				setSelection({
-					...selection,
-					startTime: baseTime,
-					// 終了時間は選択した枠の次の10分から
-					endTime: addMinutes(
-						set(date, {
-							hours: currentSlot.hour,
-							minutes: currentSlot.minute,
-							seconds: 0,
-						}),
-						10,
-					),
-				});
-			} else {
-				// 左方向へのドラッグ
-				setSelection({
-					...selection,
-					startTime: set(date, {
-						hours: currentSlot.hour,
-						minutes: currentSlot.minute,
-						seconds: 0,
-					}),
-					endTime: addMinutes(baseTime, 10),
-				});
-			}
-		}
+		updateSelection(pcId, timeSlotIndex);
 	};
 
 	// タッチ移動時の処理（スマートフォン用）
@@ -201,7 +135,7 @@ export default function Home() {
 				format(selection.endTime, "HH:mm"),
 			);
 		}
-		setIsDragging(false);
+		endSelection();
 	};
 
 	// タッチ終了時の処理
@@ -226,31 +160,15 @@ export default function Home() {
 		};
 	}, [isDragging, selection]);
 
-	const getCellBackgroundColor = (
-		pcId: string,
-		hour: number,
-		minute: number,
-	) => {
-		if (selection.pcId === pcId && selection.startTime && selection.endTime) {
-			const cellTime = set(date, { hours: hour, minutes: minute, seconds: 0 });
-			if (cellTime >= selection.startTime && cellTime < selection.endTime) {
-				return "bg-blue-200 dark:bg-blue-800";
-			}
-		}
-		return "bg-white dark:bg-gray-800";
-	};
-
+	// 日付変更時の処理
 	const handleDateChange = (newDate: Date | undefined) => {
 		if (newDate) {
 			setDate(newDate);
-			setSelection({
-				pcId: null,
-				startTime: null,
-				endTime: null,
-			});
+			resetSelection();
 		}
 	};
 
+	// 予約を確定する処理
 	const confirmReservation = () => {
 		if (!selection.pcId || !selection.startTime || !selection.endTime) return;
 
@@ -260,11 +178,7 @@ export default function Home() {
 			`予約を確定します: ${selectedPc?.name}, ${format(selection.startTime, "yyyy/MM/dd HH:mm")} - ${format(selection.endTime, "HH:mm")}`,
 		);
 
-		setSelection({
-			pcId: null,
-			startTime: null,
-			endTime: null,
-		});
+		resetSelection();
 	};
 
 	return (
@@ -336,13 +250,11 @@ export default function Home() {
 												minute={slot.minute}
 												slotIndex={slotIndex}
 												pcIndex={pcIndex}
-												isSelected={
-													getCellBackgroundColor(
-														pc.id,
-														slot.hour,
-														slot.minute,
-													) === "bg-blue-200 dark:bg-blue-800"
-												}
+												isSelected={isCellSelected(
+													pc.id,
+													slot.hour,
+													slot.minute,
+												)}
 												isHourStart={slot.minute === 0}
 												onMouseDown={handleCellMouseDown}
 												onMouseEnter={handleCellMouseEnter}
@@ -357,10 +269,9 @@ export default function Home() {
 
 					{/* 選択情報の表示 */}
 					{selection.startTime && selection.endTime && selection.pcId && (
-						<Card>
+						<Card className="mt-4">
 							<CardHeader>
 								<CardTitle>予約内容</CardTitle>
-								{/* <CardDescription>Card Description</CardDescription> */}
 							</CardHeader>
 							<CardContent>
 								<p>PC: {pcs.find((pc) => pc.id === selection.pcId)?.name}</p>
