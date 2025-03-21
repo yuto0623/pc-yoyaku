@@ -1,10 +1,17 @@
-import Image from "next/image";
-import { ThemeToggle } from "./components/ThemeToggle/ThemeToggle";
+"use client";
+import { Calendar } from "@/components/ui/calendar";
+import { useState } from "react";
 
 export default function Home() {
+	const [date, setDate] = useState<Date | undefined>(new Date());
 	return (
 		<div>
-			testtest
+			<Calendar
+				mode="single"
+				selected={date}
+				onSelect={setDate}
+				className="rounded-md border"
+			/>
 			<p>test</p>
 		</div>
 	);
