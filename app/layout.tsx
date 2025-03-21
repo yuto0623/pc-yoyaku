@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "PC予約",
 	description: "PC予約システム",
+	robots: "noindex, nofollow",
 };
 
 export default function RootLayout({
