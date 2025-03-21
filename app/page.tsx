@@ -27,7 +27,7 @@ export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
 	const [pcs, setPcs] = useState<PC[]>([
 		{ id: "1", name: "1号機（白）富士通" },
-		{ id: "2", name: "	2号機（黒）ダイナブック" },
+		{ id: "2", name: "2号機（黒）ダイナブック" },
 	]);
 
 	// 時間選択の状態
@@ -43,6 +43,9 @@ export default function Home() {
 		pcIndex: number;
 		timeSlotIndex: number;
 	} | null>(null);
+
+	// グリッドのref
+	const gridRef = useRef<HTMLDivElement>(null);
 
 	// 10分単位のタイムスロットを生成（0:00-23:50）- 24時間対応
 	const generateTimeSlots = (): TimeSlot[] => {
@@ -129,10 +132,42 @@ export default function Home() {
 		}
 	};
 
+	// タッチ移動時の処理（スマートフォン用）
+	const handleTouchMove = (event: React.TouchEvent) => {
+		if (!isDragging || !selection.pcId || !dragStartCell || !gridRef.current) {
+			return;
+		}
+
+		event.preventDefault(); // スクロールを防止
+
+		const touch = event.touches[0];
+		const gridRect = gridRef.current.getBoundingClientRect();
+
+		// タッチ位置の要素を取得
+		const elementsAtTouch = document.elementsFromPoint(
+			touch.clientX,
+			touch.clientY,
+		);
+
+		// タッチ要素からセルを探す
+		const touchedCell = elementsAtTouch.find(
+			(el) =>
+				el.classList.contains("time-cell") &&
+				el.getAttribute("data-pc-id") === selection.pcId,
+		);
+
+		if (touchedCell) {
+			const timeSlotIndex = Number.parseInt(
+				touchedCell.getAttribute("data-index") || "0",
+				10,
+			);
+			handleCellMouseEnter(selection.pcId, timeSlotIndex);
+		}
+	};
+
 	// ドラッグ終了の処理
 	const handleMouseUp = () => {
 		if (isDragging && selection.startTime && selection.endTime) {
-			// ドラッグ終了時に選択を確定（既に10分単位で設定されているのでそのまま）
 			console.log(
 				"予約時間確定:",
 				format(selection.startTime, "HH:mm"),
@@ -225,7 +260,12 @@ export default function Home() {
 						{format(date, "yyyy年MM月dd日 (eee)", { locale: ja })}の予約状況
 					</h2>
 
-					<div className="overflow-x-auto">
+					{/* スマホ用の説明 */}
+					<p className="text-sm text-gray-500 mb-2 md:hidden">
+						長押し＆ドラッグで時間を選択できます
+					</p>
+
+					<div className="overflow-x-auto" ref={gridRef}>
 						<div className="min-w-full" style={{ minWidth: "1600px" }}>
 							{/* 時間ヘッダー - 1時間単位 */}
 							<div className="flex">
@@ -251,11 +291,13 @@ export default function Home() {
 									</div>
 
 									{/* 時間セル - 10分単位 */}
-									<div className="flex">
+									<div className="flex" onTouchMove={handleTouchMove}>
 										{timeSlots.map((slot, slotIndex) => (
 											<div
 												key={`${pc.id}-${slot.hour.toString().padStart(2, "0")}:${slot.minute.toString().padStart(2, "0")}`}
-												className={`w-[10px] h-full flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""}`}
+												className={`w-[10px] h-full flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
+												data-pc-id={pc.id}
+												data-index={slotIndex}
 												onMouseDown={() =>
 													handleCellMouseDown(pc.id, slotIndex, pcIndex)
 												}
