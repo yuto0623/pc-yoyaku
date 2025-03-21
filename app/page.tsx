@@ -193,7 +193,7 @@ export default function Home() {
 						mode="single"
 						selected={date}
 						onSelect={handleDateChange}
-						className="rounded-md border"
+						className="rounded-md border w-fit"
 					/>
 				</div>
 
