@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { addDays, addHours, addMinutes, format, set } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -422,13 +423,13 @@ export default function Home() {
 								日時: {format(selection.startTime, "yyyy/MM/dd HH:mm")} -
 								{format(selection.endTime, "HH:mm")}
 							</p>
-							<button
+							<Button
 								type="button"
-								className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
 								onClick={confirmReservation}
+								className="mt-4"
 							>
 								この時間で予約する
-							</button>
+							</Button>
 						</div>
 					)}
 				</div>
