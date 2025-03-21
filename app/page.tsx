@@ -1,6 +1,14 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { addDays, addHours, addMinutes, format, set } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
@@ -394,7 +402,7 @@ export default function Home() {
 										{timeSlots.map((slot, slotIndex) => (
 											<div
 												key={`${pc.id}-${slot.hour.toString().padStart(2, "0")}:${slot.minute.toString().padStart(2, "0")}`}
-												className={`w-[10px] h-10 flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
+												className={`w-[10px] h-full flex-shrink-0 border-r border-b ${getCellBackgroundColor(pc.id, slot.hour, slot.minute)} cursor-pointer transition-colors ${slot.minute === 0 ? "border-l border-l-gray-400" : ""} time-cell`}
 												data-pc-id={pc.id}
 												data-index={slotIndex}
 												onMouseDown={() =>
@@ -416,21 +424,24 @@ export default function Home() {
 
 					{/* 選択情報の表示 */}
 					{selection.startTime && selection.endTime && selection.pcId && (
-						<div className="mt-6 p-4 border rounded-md bg-blue-50 dark:bg-blue-900/20">
-							<h3 className="font-medium">予約内容</h3>
-							<p>PC: {pcs.find((pc) => pc.id === selection.pcId)?.name}</p>
-							<p>
-								日時: {format(selection.startTime, "yyyy/MM/dd HH:mm")} -
-								{format(selection.endTime, "HH:mm")}
-							</p>
-							<Button
-								type="button"
-								onClick={confirmReservation}
-								className="mt-4"
-							>
-								この時間で予約する
-							</Button>
-						</div>
+						<Card>
+							<CardHeader>
+								<CardTitle>予約内容</CardTitle>
+								{/* <CardDescription>Card Description</CardDescription> */}
+							</CardHeader>
+							<CardContent>
+								<p>PC: {pcs.find((pc) => pc.id === selection.pcId)?.name}</p>
+								<p>
+									日時: {format(selection.startTime, "yyyy/MM/dd HH:mm")} -
+									{format(selection.endTime, "HH:mm")}
+								</p>
+							</CardContent>
+							<CardFooter>
+								<Button type="button" onClick={confirmReservation}>
+									この時間で予約する
+								</Button>
+							</CardFooter>
+						</Card>
 					)}
 				</div>
 			</div>
