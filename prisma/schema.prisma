@@ -9,6 +9,28 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+// PCモデル：予約可能なコンピュータ情報
+model Computer {
+  id           String        @id @default(uuid())
+  name         String // PC名またはタグ番号
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+// 予約モデル：誰がどのPCをいつ予約したか
+model Reservation {
+  id         String   @id @default(uuid())
+  userName   String
+  computerId String
+  computer   Computer @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  startTime  DateTime // 予約開始日時
+  endTime    DateTime // 予約終了日時
+  notes      String? // 特記事項
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
