@@ -118,11 +118,32 @@ export default function TimeSlotCell({
 						)}
 					</div>
 				</TooltipTrigger>
-				<TooltipContent side="top">
+				<TooltipContent
+					side="top"
+					className="px-3 py-2  shadow-lg border border-gray-200 dark:border-gray-700 rounded-md"
+				>
 					{isReserved ? (
-						<div className="text-xs">
-							<div className="font-bold">{reservedBy || "名前なし"}</div>
-							<div>
+						<div className="flex flex-col gap-1">
+							<div className="font-medium text-sm">
+								{reservedBy || "名前なし"}
+							</div>
+							<div className="text-xs flex items-center gap-1.5">
+								<svg
+									aria-label="予約済み"
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<title>予約済み</title>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
 								{formatReservationTimeRange(
 									reservationStartTime,
 									reservationEndTime,
