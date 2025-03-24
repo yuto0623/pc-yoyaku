@@ -31,7 +31,7 @@ export const useReservations = (date: Date) => {
 				const day = String(date.getDate()).padStart(2, "0");
 				const formattedDate = `${year}-${month}-${day}`;
 
-				console.log("APIに送信する日付:", formattedDate);
+				// console.log("APIに送信する日付:", formattedDate);
 
 				const response = await fetch(`/api/reservations?date=${formattedDate}`);
 
