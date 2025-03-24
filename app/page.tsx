@@ -297,7 +297,12 @@ export default function Home() {
 	};
 
 	// 予約を確定する処理
-	const confirmReservation = async (userName: string, notes?: string) => {
+	const confirmReservation = async (
+		userName: string,
+		startTime: Date,
+		endTime: Date,
+		notes?: string,
+	) => {
 		if (!selection.pcId || !selection.startTime || !selection.endTime) return;
 
 		try {
@@ -309,8 +314,8 @@ export default function Home() {
 				},
 				body: JSON.stringify({
 					computerId: selection.pcId,
-					startTime: selection.startTime,
-					endTime: selection.endTime,
+					startTime,
+					endTime,
 					userName,
 					notes,
 				}),
@@ -508,19 +513,9 @@ export default function Home() {
 								selection={selection}
 								pcs={pcs}
 								onConfirm={confirmReservation}
-								onCancel={cancelReservation}
-								open={
-									isReservationFormOpen &&
-									!!selection.startTime &&
-									!!selection.endTime &&
-									!!selection.pcId
-								}
-								onOpenChange={(open) => {
-									setIsReservationFormOpen(open);
-									if (!open) {
-										cancelReservation();
-									}
-								}}
+								onCancel={resetSelection}
+								open={isReservationFormOpen}
+								onOpenChange={setIsReservationFormOpen}
 							/>
 						)}
 					</div>
