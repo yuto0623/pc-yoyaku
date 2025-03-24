@@ -102,7 +102,7 @@ export default function TimeSlotCell({
 						onTouchStart={handleTouchStart}
 					>
 						{isReserved && startTime && (
-							<span className="absolute inset-0 flex items-center justify-start z-10 font-bold pointer-events-none">
+							<span className="absolute whitespace-nowrap inset-0 flex items-center justify-start z-10 font-bold">
 								{reservedBy}
 							</span>
 						)}
