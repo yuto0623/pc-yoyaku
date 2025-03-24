@@ -51,7 +51,7 @@ export function useReservationHelpers(date: Date, reservations: Reservation[]) {
 	const isCellReserved = useCallback(
 		(pcId: string, hour: number, minute: number): boolean => {
 			const cellTime = new Date(date);
-			cellTime.setHours(hour, minute, 0, 0);
+			cellTime.setHours(hour, minute - 10, 0, 0);
 
 			// 最適化: インデックスから特定PCの予約だけを検索
 			const pcReservations = reservationIndex.byPc.get(pcId) || [];
