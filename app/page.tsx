@@ -403,7 +403,7 @@ export default function Home() {
 							<div className="min-w-full" style={{ minWidth: "1600px" }}>
 								{/* 時間ヘッダー - 1時間単位 */}
 								<div className="flex">
-									<div className="w-32 border-r border-b p-2 font-medium bg-gray-50 dark:bg-gray-700 sticky left-0">
+									<div className="w-24 border-r border-b p-2 font-medium bg-gray-50 dark:bg-gray-700 sticky left-0">
 										PC
 									</div>
 									{hourHeaders.map((hour) => (
@@ -420,7 +420,7 @@ export default function Home() {
 								{pcs.map((pc, pcIndex) => (
 									<div key={pc.id} className="flex">
 										{/* PC情報 */}
-										<div className="w-32 border-r border-b p-2 bg-gray-50 dark:bg-gray-700 sticky left-0 z-20">
+										<div className="w-24 border-r border-b p-2 bg-gray-50 dark:bg-gray-700 sticky left-0 z-20">
 											<div className="font-medium">{pc.name}</div>
 										</div>
 
