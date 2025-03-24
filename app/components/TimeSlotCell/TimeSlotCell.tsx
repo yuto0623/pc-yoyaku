@@ -23,6 +23,13 @@ type TimeSlotCellProps = {
 	onMouseDown: (pcId: string, slotIndex: number, pcIndex: number) => void;
 	onMouseEnter: (pcId: string, slotIndex: number) => void;
 	onTouchStart: (pcId: string, slotIndex: number, pcIndex: number) => void;
+	onReservationClick?: (
+		pcId: string,
+		slotIndex: number,
+		startTime?: Date,
+		endTime?: Date,
+		reservedBy?: string,
+	) => void;
 };
 
 export default function TimeSlotCell({
@@ -41,6 +48,7 @@ export default function TimeSlotCell({
 	onMouseDown,
 	onMouseEnter,
 	onTouchStart,
+	onReservationClick,
 }: TimeSlotCellProps) {
 	// 背景色の決定
 	let backgroundColor: string;
@@ -55,9 +63,16 @@ export default function TimeSlotCell({
 	// 時間の区切り（時間の始まり）に左ボーダーを追加
 	const leftBorder = isHourStart ? "border-l border-l-gray-400" : "";
 
-	// 予約済みのセルはクリック不可
+	// 予約済みのセルはクリック処理を変更
 	const handleMouseDown = isReserved
-		? undefined
+		? () =>
+				onReservationClick?.(
+					pcId,
+					slotIndex,
+					reservationStartTime,
+					reservationEndTime,
+					reservedBy,
+				)
 		: () => onMouseDown(pcId, slotIndex, pcIndex);
 	const handleMouseEnter = isReserved
 		? undefined

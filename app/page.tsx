@@ -5,6 +5,7 @@ import { ja } from "date-fns/locale";
 import { useCallback, useEffect, useMemo } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import ReservationEditForm from "./components/ReservationEditForm/ReservationEditForm";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useReservationHelpers } from "./components/hooks/useReservationHelpers";
@@ -39,19 +40,118 @@ export default function Home() {
 		reservationCount,
 	} = useReservationHelpers(date, reservations);
 
-	// 予約データのインデックス作成（高速検索用）
-	const reservationIndex = useMemo(() => {
-		const pcMap = new Map();
+	// 予約編集用のステートを追加
+	const [editingReservation, setEditingReservation] = useState<{
+		pcId: string;
+		startTime?: Date;
+		endTime?: Date;
+		userName?: string;
+		notes?: string;
+		id?: string;
+	} | null>(null);
 
-		for (const r of reservations) {
-			if (!pcMap.has(r.computerId)) {
-				pcMap.set(r.computerId, []);
+	// 予約クリック時の処理を追加
+	const handleReservationClick = useCallback(
+		(
+			pcId: string,
+			slotIndex: number,
+			startTime?: Date,
+			endTime?: Date,
+			reservedBy?: string,
+		) => {
+			// スロットインデックスからその時間に対応する予約を検索
+			if (!startTime || !endTime) return;
+
+			// 予約を探す
+			const reservation = reservations.find(
+				(r) =>
+					r.computerId === pcId &&
+					r.startTime.getTime() === startTime.getTime() &&
+					r.endTime.getTime() === endTime.getTime(),
+			);
+
+			if (reservation) {
+				// 編集モードを開始
+				setEditingReservation({
+					pcId,
+					startTime,
+					endTime,
+					userName: reservation.userName,
+					notes: reservation.notes || "",
+					id: reservation.id,
+				});
 			}
-			pcMap.get(r.computerId).push(r);
-		}
+		},
+		[reservations],
+	);
 
-		return { byPc: pcMap, all: reservations };
-	}, [reservations]);
+	// 予約更新処理
+	const updateReservation = async (userName: string, notes?: string) => {
+		if (!editingReservation?.id) return;
+
+		try {
+			const response = await fetch(
+				`/api/reservations/${editingReservation.id}`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						userName,
+						notes,
+					}),
+				},
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "予約の更新に失敗しました");
+			}
+
+			toast("予約が更新されました");
+			setEditingReservation(null);
+
+			// 予約一覧を更新
+			await refreshReservations();
+		} catch (error) {
+			console.error("更新エラー:", error);
+			throw error;
+		}
+	};
+
+	// 予約削除処理
+	const deleteReservation = async () => {
+		if (!editingReservation?.id) return;
+
+		try {
+			const response = await fetch(
+				`/api/reservations/${editingReservation.id}`,
+				{
+					method: "DELETE",
+				},
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "予約の削除に失敗しました");
+			}
+
+			toast("予約が削除されました");
+			setEditingReservation(null);
+
+			// 予約一覧を更新
+			await refreshReservations();
+		} catch (error) {
+			console.error("削除エラー:", error);
+			throw error;
+		}
+	};
+
+	// 編集キャンセル
+	const cancelEdit = () => {
+		setEditingReservation(null);
+	};
 
 	// 時間スロットと時間ヘッダーを生成
 	const { timeSlots, hourHeaders } = useTimeSlots();
@@ -369,8 +469,27 @@ export default function Home() {
 													onMouseDown={handleCellMouseDown}
 													onMouseEnter={handleCellMouseEnter}
 													onTouchStart={handleTouchStart}
+													onReservationClick={handleReservationClick}
 												/>
 											))}
+											{/* 予約編集フォームを追加 */}
+											{editingReservation && (
+												<ReservationEditForm
+													open={!!editingReservation}
+													onOpenChange={(open) => {
+														if (!open) setEditingReservation(null);
+													}}
+													pcId={editingReservation.pcId}
+													pcs={pcs}
+													startTime={editingReservation.startTime}
+													endTime={editingReservation.endTime}
+													userName={editingReservation.userName}
+													notes={editingReservation.notes}
+													onUpdate={updateReservation}
+													onDelete={deleteReservation}
+													onCancel={cancelEdit}
+												/>
+											)}
 										</div>
 									</div>
 								))}
