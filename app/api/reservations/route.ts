@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
 		const start = new Date(startTime);
 		const end = new Date(endTime);
 
-		console.log("受信した予約開始時間:", startTime);
-		console.log("変換後の予約開始時間:", start.toISOString());
-		console.log("受信した予約終了時間:", endTime);
-		console.log("変換後の予約終了時間:", end.toISOString());
+		// console.log("受信した予約開始時間:", startTime);
+		// console.log("変換後の予約開始時間:", start.toISOString());
+		// console.log("受信した予約終了時間:", endTime);
+		// console.log("変換後の予約終了時間:", end.toISOString());
 
 		// 予約時間の重複チェック
 		const existingReservation = await prisma.reservation.findFirst({
@@ -102,20 +102,20 @@ export async function GET(request: NextRequest) {
 			Date.UTC(year, month - 1, day, 14, 59, 59, 999),
 		);
 
-		console.log(
-			"日本時間での検索開始:",
-			new Date(startOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
-				"ja-JP",
-			),
-		);
-		console.log(
-			"日本時間での検索終了:",
-			new Date(endOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
-				"ja-JP",
-			),
-		);
-		console.log("UTC時間での検索開始:", startOfDayJST.toISOString());
-		console.log("UTC時間での検索終了:", endOfDayJST.toISOString());
+		// console.log(
+		// 	"日本時間での検索開始:",
+		// 	new Date(startOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
+		// 		"ja-JP",
+		// 	),
+		// );
+		// console.log(
+		// 	"日本時間での検索終了:",
+		// 	new Date(endOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
+		// 		"ja-JP",
+		// 	),
+		// );
+		// console.log("UTC時間での検索開始:", startOfDayJST.toISOString());
+		// console.log("UTC時間での検索終了:", endOfDayJST.toISOString());
 
 		// データベース検索
 		const reservations = await prisma.reservation.findMany({
