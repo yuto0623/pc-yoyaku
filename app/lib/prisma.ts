@@ -1,8 +1,18 @@
 import { PrismaClient } from "@prisma/client";
 
-// PrismaClientをグローバルに宣言して、ホットリロードで複数インスタンスが作成されるのを防ぐ
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// PrismaClientの型定義
+declare global {
+	var prismaClient: PrismaClient | undefined;
+}
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+// ログを有効にした新しいクライアント
+export const prisma =
+	global.prismaClient ||
+	new PrismaClient({
+		log: ["query", "info", "warn", "error"],
+	});
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// 開発環境ではグローバル変数を使用（ホットリロード対応）
+if (process.env.NODE_ENV !== "production") {
+	global.prismaClient = prisma;
+}

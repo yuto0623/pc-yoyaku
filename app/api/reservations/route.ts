@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
 		const start = new Date(startTime);
 		const end = new Date(endTime);
 
+		console.log("受信した予約開始時間:", startTime);
+		console.log("変換後の予約開始時間:", start.toISOString());
+		console.log("受信した予約終了時間:", endTime);
+		console.log("変換後の予約終了時間:", end.toISOString());
+
 		// 予約時間の重複チェック
 		const existingReservation = await prisma.reservation.findFirst({
 			where: {
@@ -86,28 +91,38 @@ export async function GET(request: NextRequest) {
 	try {
 		console.log("検索日付文字列:", dateStr);
 
-		// UTC考慮したDate処理
-		const inputDate = new Date(dateStr);
-		console.log("解析された日付:", inputDate);
+		// 日付文字列をYYYY-MM-DD形式に解析
+		const [year, month, day] = dateStr.split("-").map(Number);
 
-		// 日付のみを抽出（時間情報をリセット）
-		const year = inputDate.getFullYear();
-		const month = inputDate.getMonth();
-		const day = inputDate.getDate();
+		// 日本時間の0時（UTC時間では前日の15:00）
+		const startOfDayJST = new Date(Date.UTC(year, month - 1, day, -9, 0, 0));
 
-		// 日付範囲を明示的に設定
-		const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0));
-		const endOfDay = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+		// 日本時間の23:59:59（UTC時間では当日の14:59:59）
+		const endOfDayJST = new Date(
+			Date.UTC(year, month - 1, day, 14, 59, 59, 999),
+		);
 
-		console.log("検索開始日時:", startOfDay.toISOString());
-		console.log("検索終了日時:", endOfDay.toISOString());
+		console.log(
+			"日本時間での検索開始:",
+			new Date(startOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
+				"ja-JP",
+			),
+		);
+		console.log(
+			"日本時間での検索終了:",
+			new Date(endOfDayJST.getTime() + 9 * 60 * 60 * 1000).toLocaleString(
+				"ja-JP",
+			),
+		);
+		console.log("UTC時間での検索開始:", startOfDayJST.toISOString());
+		console.log("UTC時間での検索終了:", endOfDayJST.toISOString());
 
 		// データベース検索
 		const reservations = await prisma.reservation.findMany({
 			where: {
 				startTime: {
-					gte: startOfDay,
-					lte: endOfDay,
+					gte: startOfDayJST,
+					lte: endOfDayJST,
 				},
 			},
 			include: {

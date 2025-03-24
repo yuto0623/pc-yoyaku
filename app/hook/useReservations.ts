@@ -24,28 +24,40 @@ export const useReservations = (date: Date) => {
 		const fetchReservations = async () => {
 			try {
 				setLoading(true);
-				const dateStr = format(date, "yyyy-MM-dd");
-				const response = await fetch(`/api/reservations?date=${dateStr}`);
+
+				// 日本時間の日付をYYYY-MM-DD形式で取得
+				const year = date.getFullYear();
+				const month = String(date.getMonth() + 1).padStart(2, "0");
+				const day = String(date.getDate()).padStart(2, "0");
+				const formattedDate = `${year}-${month}-${day}`;
+
+				console.log("APIに送信する日付:", formattedDate);
+
+				const response = await fetch(`/api/reservations?date=${formattedDate}`);
 
 				if (!response.ok) {
-					throw new Error("予約データの取得に失敗しました");
+					const errorData = await response.json();
+					throw new Error(errorData.error || `API Error: ${response.status}`);
 				}
 
-				let data = await response.json();
-				// 日時文字列をDateオブジェクトに変換
-				data = data.map((reservation: Reservation) => ({
-					...reservation,
-					startTime: new Date(reservation.startTime),
-					endTime: new Date(reservation.endTime),
-				}));
+				const data = await response.json();
 
-				setReservations(data);
+				// レスポンスをDate型に変換
+				const formattedData = Array.isArray(data)
+					? data.map((item) => ({
+							...item,
+							startTime: new Date(item.startTime),
+							endTime: new Date(item.endTime),
+						}))
+					: [];
+
+				setReservations(formattedData);
 			} catch (err) {
+				console.error("予約取得エラー:", err);
 				setError(
-					err instanceof Error
-						? err.message
-						: "予約データの取得中にエラーが発生しました",
+					err instanceof Error ? err.message : "予約データの取得に失敗しました",
 				);
+				setReservations([]);
 			} finally {
 				setLoading(false);
 			}

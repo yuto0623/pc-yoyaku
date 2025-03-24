@@ -1,3 +1,6 @@
+import { addHours, format } from "date-fns";
+import { ja } from "date-fns/locale";
+
 type TimeSlotCellProps = {
 	pcId: string;
 	hour: number;
@@ -13,6 +16,12 @@ type TimeSlotCellProps = {
 	onTouchStart: (pcId: string, slotIndex: number, pcIndex: number) => void;
 };
 
+// 日本時間でフォーマットする関数
+function formatJstTime(hour: number, minute: number): string {
+	const date = new Date();
+	date.setHours(hour, minute, 0, 0);
+	return format(addHours(date, 9), "HH:mm", { locale: ja });
+}
 export default function TimeSlotCell({
 	pcId,
 	hour,
@@ -51,6 +60,11 @@ export default function TimeSlotCell({
 		? undefined
 		: () => onTouchStart(pcId, slotIndex, pcIndex);
 
+	const timeLabel = formatJstTime(hour, minute);
+	const title = isReserved
+		? `${timeLabel} - 予約済み: ${reservedBy || "名前なし"}`
+		: `${timeLabel}`;
+
 	return (
 		<div
 			key={`${pcId}-${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`}
@@ -60,7 +74,7 @@ export default function TimeSlotCell({
 			onMouseDown={handleMouseDown}
 			onMouseEnter={handleMouseEnter}
 			onTouchStart={handleTouchStart}
-			title={isReserved ? `予約済み: ${reservedBy || "名前なし"}` : undefined}
+			title={title}
 		>
 			{/* 予約済みの場合は小さいアイコンやマークを表示することもできます */}
 			{isReserved && isHourStart && (

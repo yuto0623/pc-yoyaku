@@ -351,7 +351,7 @@ export default function Home() {
 													isReserved={isCellReserved(
 														pc.id,
 														slot.hour,
-														slot.minute,
+														slot.minute + 10,
 													)}
 													reservedBy={getReservationUserName(
 														pc.id,
