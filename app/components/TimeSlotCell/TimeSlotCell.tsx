@@ -91,7 +91,7 @@ export default function TimeSlotCell({
 
 	return (
 		<TooltipProvider>
-			<Tooltip delayDuration={300}>
+			<Tooltip delayDuration={200}>
 				<TooltipTrigger asChild>
 					<div
 						className={`w-[10px] h-full flex-shrink-0 border-r border-b ${backgroundColor} cursor-pointer transition-colors ${leftBorder} time-cell relative`}
