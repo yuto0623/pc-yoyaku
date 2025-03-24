@@ -9,6 +9,7 @@ type TimeSlotCellProps = {
 	pcIndex: number;
 	isSelected: boolean;
 	isHourStart: boolean;
+	startTime: boolean;
 	isReserved?: boolean; // 追加: 既存予約かどうか
 	reservedBy?: string; // 追加: 予約者名
 	onMouseDown: (pcId: string, slotIndex: number, pcIndex: number) => void;
@@ -30,6 +31,7 @@ export default function TimeSlotCell({
 	pcIndex,
 	isSelected,
 	isHourStart,
+	startTime,
 	isReserved = false,
 	reservedBy,
 	onMouseDown,
@@ -76,10 +78,10 @@ export default function TimeSlotCell({
 			onTouchStart={handleTouchStart}
 			title={title}
 		>
-			{/* 予約済みの場合は小さいアイコンやマークを表示することもできます */}
-			{isReserved && isHourStart && (
-				<span className="absolute inset-0 flex items-center justify-center text-[6px] text-red-800">
-					●
+			{/* 予約済みかつ時間の開始位置で名前の頭文字を表示 */}
+			{isReserved && startTime && (
+				<span className="absolute inset-0 flex items-center justify-start font-bold overflow-visible pl-1 z-10">
+					{reservedBy}
 				</span>
 			)}
 		</div>

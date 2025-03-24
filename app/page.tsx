@@ -254,6 +254,31 @@ export default function Home() {
 		resetSelection();
 	};
 
+	// 予約の開始時間かどうかをチェック
+	const isReservationStart = (
+		pcId: string,
+		hour: number,
+		minute: number,
+	): boolean => {
+		const cellTime = new Date(date);
+		cellTime.setHours(hour, minute, 0, 0);
+
+		// 前のセルの時間を計算
+		const prevCellTime = new Date(cellTime);
+		prevCellTime.setMinutes(prevCellTime.getMinutes() - 10); // 10分前
+
+		// このセルが予約されているが、前のセルが予約されていない場合は開始時間
+		return (
+			isCellReserved(pcId, hour, minute) &&
+			!reservations.some(
+				(reservation) =>
+					reservation.computerId === pcId &&
+					prevCellTime >= reservation.startTime &&
+					prevCellTime < reservation.endTime,
+			)
+		);
+	};
+
 	return (
 		<div className="container mx-auto p-4">
 			<h1 className="text-2xl font-bold mb-4">PC予約システム</h1>
@@ -343,6 +368,11 @@ export default function Home() {
 														slot.minute,
 													)}
 													isHourStart={slot.minute === 0}
+													startTime={isReservationStart(
+														pc.id,
+														slot.hour,
+														slot.minute + 10,
+													)}
 													isReserved={isCellReserved(
 														pc.id,
 														slot.hour,
@@ -351,7 +381,7 @@ export default function Home() {
 													reservedBy={getReservationUserName(
 														pc.id,
 														slot.hour,
-														slot.minute,
+														slot.minute + 10,
 													)}
 													onMouseDown={handleCellMouseDown}
 													onMouseEnter={handleCellMouseEnter}
