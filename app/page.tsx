@@ -354,12 +354,6 @@ export default function Home() {
 		}
 	}, [selection.startTime, selection.endTime, selection.pcId, isDragging]);
 
-	// 予約フォームキャンセル処理を修正
-	const cancelReservation = () => {
-		resetSelection();
-		setIsReservationFormOpen(false);
-	};
-
 	// 予約リストクリック時の処理
 	const handleReservationListClick = (reservation: Reservation) => {
 		// 予約を編集モードで開く
