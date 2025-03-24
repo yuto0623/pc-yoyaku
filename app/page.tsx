@@ -15,6 +15,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
+import { useReservationHelpers } from "./components/hooks/useReservationHelpers";
 import { useTimeSelection } from "./components/hooks/useTimeSelection";
 import { useTimeSlots } from "./components/hooks/useTimeSlots";
 import { useTouchDrag } from "./components/hooks/useTouchDrag";
@@ -24,7 +25,7 @@ import { useReservations } from "./hook/useReservations";
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
 
-	// SQLiteからPCデータを取得
+	// DBからPCデータを取得
 	const { computers: pcs, loading, error } = useComputers();
 
 	// 予約データを取得
@@ -34,6 +35,16 @@ export default function Home() {
 		error: reservationsError,
 		refreshReservations,
 	} = useReservations(date);
+
+	// カスタムフックの使用
+	const {
+		isCellReserved,
+		getReservationUserName,
+		isReservationStart,
+		getReservationTimes,
+		formatReservationTimeRange,
+		reservationCount,
+	} = useReservationHelpers(date, reservations);
 
 	// 予約データのインデックス作成（高速検索用）
 	const reservationIndex = useMemo(() => {
@@ -48,40 +59,6 @@ export default function Home() {
 
 		return { byPc: pcMap, all: reservations };
 	}, [reservations]);
-
-	// 既存関数をメモ化
-	const isCellReserved = useCallback(
-		(pcId: string, hour: number, minute: number): boolean => {
-			const cellTime = new Date(date);
-			cellTime.setHours(hour, minute, 0, 0);
-
-			// 最適化: インデックスから特定PCの予約だけを検索
-			const pcReservations = reservationIndex.byPc.get(pcId) || [];
-			return pcReservations.some(
-				(r: { startTime: Date; endTime: Date }) =>
-					cellTime >= r.startTime && cellTime < r.endTime,
-			);
-		},
-		[date, reservationIndex],
-	);
-
-	// セルの予約者名を取得
-	const getReservationUserName = useCallback(
-		(pcId: string, hour: number, minute: number): string | undefined => {
-			// 同様の最適化
-			const cellTime = new Date(date);
-			cellTime.setHours(hour, minute, 0, 0);
-
-			const pcReservations = reservationIndex.byPc.get(pcId) || [];
-			const reservation = pcReservations.find(
-				(r: { startTime: Date; endTime: Date }) =>
-					cellTime >= r.startTime && cellTime < r.endTime,
-			);
-
-			return reservation?.userName;
-		},
-		[date, reservationIndex],
-	);
 
 	// 時間スロットと時間ヘッダーを生成
 	const { timeSlots, hourHeaders } = useTimeSlots();
@@ -263,57 +240,6 @@ export default function Home() {
 	// 予約フォームをキャンセル
 	const cancelReservation = () => {
 		resetSelection();
-	};
-
-	// 予約の開始時間かどうかをチェック（改良版）
-	const isReservationStart = (
-		pcId: string,
-		hour: number,
-		minute: number,
-	): boolean => {
-		const cellTime = new Date(date);
-		cellTime.setHours(hour, minute, 0, 0);
-
-		// この時間を含む予約を検索
-		const currentReservation = reservations.find(
-			(r) =>
-				r.computerId === pcId &&
-				cellTime >= r.startTime &&
-				cellTime < r.endTime,
-		);
-
-		// 予約がなければfalseを返す
-		if (!currentReservation) return false;
-
-		// 現在の予約の開始時間（分）を10分単位に丸める
-		const resStartHour = currentReservation.startTime.getHours();
-		const resStartMinute =
-			Math.floor(currentReservation.startTime.getMinutes() / 10) * 10;
-
-		// 現在のセルが予約の開始時間と一致するかチェック
-		return resStartHour === hour && resStartMinute + 10 === minute;
-	};
-
-	// 予約情報を取得する関数を追加
-	const getReservationTimes = (
-		pcId: string,
-		hour: number,
-		minute: number,
-	): { startTime?: Date; endTime?: Date } => {
-		const cellTime = new Date(date);
-		cellTime.setHours(hour, minute, 0, 0);
-
-		const reservation = reservations.find(
-			(r) =>
-				r.computerId === pcId &&
-				cellTime >= r.startTime &&
-				cellTime < r.endTime,
-		);
-
-		return {
-			startTime: reservation?.startTime,
-			endTime: reservation?.endTime,
-		};
 	};
 
 	return (
