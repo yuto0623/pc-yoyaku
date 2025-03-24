@@ -12,11 +12,13 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect } from "react";
 import { useState } from "react";
+import ReservationForm from "./components/ReservationForm/ReservationForm";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useTimeSelection } from "./components/hooks/useTimeSelection";
 import { useTimeSlots } from "./components/hooks/useTimeSlots";
 import { useTouchDrag } from "./components/hooks/useTouchDrag";
 import { useComputers } from "./hook/useComputers";
+import { useReservations } from "./hook/useReservations";
 
 // PCタイプの定義
 type PC = {
@@ -29,6 +31,51 @@ export default function Home() {
 
 	// SQLiteからPCデータを取得
 	const { computers: pcs, loading, error } = useComputers();
+
+	// 予約データを取得
+	const {
+		reservations,
+		loading: loadingReservations,
+		error: reservationsError,
+		refreshReservations,
+	} = useReservations(date);
+
+	// 既存予約をチェックする関数
+	const isCellReserved = (
+		pcId: string,
+		hour: number,
+		minute: number,
+	): boolean => {
+		// この時間が予約済みかチェック
+		const cellTime = new Date(date);
+		cellTime.setHours(hour, minute, 0, 0);
+
+		return reservations.some(
+			(reservation) =>
+				reservation.computerId === pcId &&
+				cellTime >= reservation.startTime &&
+				cellTime < reservation.endTime,
+		);
+	};
+
+	// セルの予約者名を取得
+	const getReservationUserName = (
+		pcId: string,
+		hour: number,
+		minute: number,
+	): string | undefined => {
+		const cellTime = new Date(date);
+		cellTime.setHours(hour, minute, 0, 0);
+
+		const reservation = reservations.find(
+			(r) =>
+				r.computerId === pcId &&
+				cellTime >= r.startTime &&
+				cellTime < r.endTime,
+		);
+
+		return reservation?.userName;
+	};
 
 	// 時間スロットと時間ヘッダーを生成
 	const { timeSlots, hourHeaders } = useTimeSlots();
@@ -169,15 +216,46 @@ export default function Home() {
 	};
 
 	// 予約を確定する処理
-	const confirmReservation = () => {
+	const confirmReservation = async (userName: string, notes?: string) => {
 		if (!selection.pcId || !selection.startTime || !selection.endTime) return;
 
-		const selectedPc = pcs.find((pc) => pc.id === selection.pcId);
+		try {
+			// 予約データをAPIに送信
+			const response = await fetch("/api/reservations", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					computerId: selection.pcId,
+					startTime: selection.startTime,
+					endTime: selection.endTime,
+					userName,
+					notes,
+				}),
+			});
 
-		alert(
-			`予約を確定します: ${selectedPc?.name}, ${format(selection.startTime, "yyyy/MM/dd HH:mm")} - ${format(selection.endTime, "HH:mm")}`,
-		);
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "予約の登録に失敗しました");
+			}
 
+			// 予約成功の通知
+			alert("予約が確定しました！");
+
+			// 予約選択をリセット
+			resetSelection();
+
+			// 予約一覧を更新
+			await refreshReservations();
+		} catch (error) {
+			console.error("予約エラー:", error);
+			throw error;
+		}
+	};
+
+	// 予約フォームをキャンセル
+	const cancelReservation = () => {
 		resetSelection();
 	};
 
@@ -270,6 +348,16 @@ export default function Home() {
 														slot.minute,
 													)}
 													isHourStart={slot.minute === 0}
+													isReserved={isCellReserved(
+														pc.id,
+														slot.hour,
+														slot.minute,
+													)}
+													reservedBy={getReservationUserName(
+														pc.id,
+														slot.hour,
+														slot.minute,
+													)}
 													onMouseDown={handleCellMouseDown}
 													onMouseEnter={handleCellMouseEnter}
 													onTouchStart={handleTouchStart}
@@ -282,24 +370,14 @@ export default function Home() {
 						</div>
 
 						{/* 選択情報の表示 */}
+						{/* 選択情報の表示 - ReservationFormに置き換え */}
 						{selection.startTime && selection.endTime && selection.pcId && (
-							<Card className="mt-4">
-								<CardHeader>
-									<CardTitle>予約内容</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p>PC: {pcs.find((pc) => pc.id === selection.pcId)?.name}</p>
-									<p>
-										日時: {format(selection.startTime, "yyyy/MM/dd HH:mm")} -
-										{format(selection.endTime, "HH:mm")}
-									</p>
-								</CardContent>
-								<CardFooter>
-									<Button type="button" onClick={confirmReservation}>
-										この時間で予約する
-									</Button>
-								</CardFooter>
-							</Card>
+							<ReservationForm
+								selection={selection}
+								pcs={pcs}
+								onConfirm={confirmReservation}
+								onCancel={cancelReservation}
+							/>
 						)}
 					</div>
 				</div>
