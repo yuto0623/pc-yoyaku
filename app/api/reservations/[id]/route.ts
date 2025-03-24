@@ -2,23 +2,26 @@ import type { Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 
+type RouteParams = {
+	params: {
+		id: string;
+	};
+};
+
 // 予約更新API
-export async function PUT(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
-) {
+export async function PUT(request: NextRequest, context: RouteParams) {
 	try {
-		const id = params.id;
+		const id = context.params.id;
 		const body = await request.json();
 		const { userName, notes, startTime, endTime } = body;
 
-		// 入力値のバリデーション
 		if (!userName || !userName.trim()) {
+			// 入力値のバリデーション
 			return NextResponse.json({ error: "お名前は必須です" }, { status: 400 });
 		}
 
-		// 時間のバリデーション（開始時間と終了時間が提供されている場合）
 		if (startTime && endTime) {
+			// 時間のバリデーション（開始時間と終了時間が提供されている場合）
 			const start = new Date(startTime);
 			const end = new Date(endTime);
 
@@ -68,8 +71,9 @@ export async function PUT(
 			notes,
 		};
 
-		// 時間のデータがあれば追加
-		if (startTime) updateData.startTime = new Date(startTime);
+		if (startTime)
+			// 時間のデータがあれば追加
+			updateData.startTime = new Date(startTime);
 		if (endTime) updateData.endTime = new Date(endTime);
 
 		// 予約を更新
