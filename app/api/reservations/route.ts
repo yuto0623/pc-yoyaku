@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
 		return NextResponse.json(reservation);
 	} catch (error) {
-		console.error("予約作成中にエラーが発生しました:", error);
+		// console.error("予約作成中にエラーが発生しました:", error);
 		return NextResponse.json(
 			{ error: "予約の作成に失敗しました" },
 			{ status: 500 },
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		console.log("検索日付文字列:", dateStr);
+		// console.log("検索日付文字列:", dateStr);
 
 		// 日付文字列をYYYY-MM-DD形式に解析
 		const [year, month, day] = dateStr.split("-").map(Number);
@@ -133,10 +133,10 @@ export async function GET(request: NextRequest) {
 			},
 		});
 
-		console.log("取得した予約数:", reservations.length);
+		// console.log("取得した予約数:", reservations.length);
 		return NextResponse.json(reservations);
 	} catch (error) {
-		console.error("予約取得中にエラーが発生しました:", error);
+		// console.error("予約取得中にエラーが発生しました:", error);
 		const errorMessage =
 			error instanceof Error
 				? `予約の取得に失敗しました: ${error.message}`

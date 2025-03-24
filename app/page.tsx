@@ -279,6 +279,28 @@ export default function Home() {
 		);
 	};
 
+	// 予約情報を取得する関数を追加
+	const getReservationTimes = (
+		pcId: string,
+		hour: number,
+		minute: number,
+	): { startTime?: Date; endTime?: Date } => {
+		const cellTime = new Date(date);
+		cellTime.setHours(hour, minute, 0, 0);
+
+		const reservation = reservations.find(
+			(r) =>
+				r.computerId === pcId &&
+				cellTime >= r.startTime &&
+				cellTime < r.endTime,
+		);
+
+		return {
+			startTime: reservation?.startTime,
+			endTime: reservation?.endTime,
+		};
+	};
+
 	return (
 		<div className="container mx-auto p-4">
 			<h1 className="text-2xl font-bold mb-4">PC予約システム</h1>
@@ -383,6 +405,20 @@ export default function Home() {
 														slot.hour,
 														slot.minute + 10,
 													)}
+													reservationStartTime={
+														getReservationTimes(
+															pc.id,
+															slot.hour,
+															slot.minute + 10,
+														).startTime
+													}
+													reservationEndTime={
+														getReservationTimes(
+															pc.id,
+															slot.hour,
+															slot.minute + 10,
+														).endTime
+													}
 													onMouseDown={handleCellMouseDown}
 													onMouseEnter={handleCellMouseEnter}
 													onTouchStart={handleTouchStart}

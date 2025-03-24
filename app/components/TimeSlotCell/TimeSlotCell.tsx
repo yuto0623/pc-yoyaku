@@ -1,3 +1,9 @@
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { addHours, format } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -12,6 +18,8 @@ type TimeSlotCellProps = {
 	startTime: boolean;
 	isReserved?: boolean; // 追加: 既存予約かどうか
 	reservedBy?: string; // 追加: 予約者名
+	reservationStartTime?: Date;
+	reservationEndTime?: Date;
 	onMouseDown: (pcId: string, slotIndex: number, pcIndex: number) => void;
 	onMouseEnter: (pcId: string, slotIndex: number) => void;
 	onTouchStart: (pcId: string, slotIndex: number, pcIndex: number) => void;
@@ -32,8 +40,10 @@ export default function TimeSlotCell({
 	isSelected,
 	isHourStart,
 	startTime,
-	isReserved = false,
+	isReserved,
 	reservedBy,
+	reservationStartTime,
+	reservationEndTime,
 	onMouseDown,
 	onMouseEnter,
 	onTouchStart,
@@ -63,27 +73,67 @@ export default function TimeSlotCell({
 		: () => onTouchStart(pcId, slotIndex, pcIndex);
 
 	const timeLabel = formatJstTime(hour, minute);
-	const title = isReserved
-		? `${timeLabel} - 予約済み: ${reservedBy || "名前なし"}`
-		: `${timeLabel}`;
+
+	// 日本時間でフォーマットする関数
+	function formatJstTime(hour: number, minute: number): string {
+		const hourStr = hour.toString().padStart(2, "0");
+		const minuteStr = minute.toString().padStart(2, "0");
+		return `${hourStr}:${minuteStr}`;
+	}
+
+	// 予約の時間範囲を表示する関数
+	function formatReservationTimeRange(
+		startTime?: Date,
+		endTime?: Date,
+	): string {
+		if (!startTime || !endTime) return "";
+
+		// 日本時間（JST）に変換
+		const jstStart = new Date(startTime.getTime() + 9 * 60 * 60 * 1000);
+		const jstEnd = new Date(endTime.getTime() + 9 * 60 * 60 * 1000);
+
+		// HH:MM形式でフォーマット
+		const startFormatted = format(jstStart, "HH:mm", { locale: ja });
+		const endFormatted = format(jstEnd, "HH:mm", { locale: ja });
+
+		return `${startFormatted}～${endFormatted}`;
+	}
 
 	return (
-		<div
-			key={`${pcId}-${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`}
-			className={`w-[10px] h-full flex-shrink-0 border-r border-b ${backgroundColor} cursor-pointer transition-colors ${leftBorder} time-cell relative`}
-			data-pc-id={pcId}
-			data-index={slotIndex}
-			onMouseDown={handleMouseDown}
-			onMouseEnter={handleMouseEnter}
-			onTouchStart={handleTouchStart}
-			title={title}
-		>
-			{/* 予約済みかつ時間の開始位置で名前の頭文字を表示 */}
-			{isReserved && startTime && (
-				<span className="absolute inset-0 flex items-center justify-start font-bold overflow-visible pl-1 z-10">
-					{reservedBy}
-				</span>
-			)}
-		</div>
+		<TooltipProvider>
+			<Tooltip delayDuration={300}>
+				<TooltipTrigger asChild>
+					<div
+						className={`w-[10px] h-full flex-shrink-0 border-r border-b ${backgroundColor} cursor-pointer transition-colors ${leftBorder} time-cell relative`}
+						data-pc-id={pcId}
+						data-index={slotIndex}
+						onMouseDown={handleMouseDown}
+						onMouseEnter={handleMouseEnter}
+						onTouchStart={handleTouchStart}
+					>
+						{isReserved && startTime && (
+							<span className="absolute inset-0 flex items-center justify-start z-10 font-bold pointer-events-none">
+								{reservedBy}
+							</span>
+						)}
+					</div>
+				</TooltipTrigger>
+				<TooltipContent side="top">
+					{isReserved ? (
+						<div className="text-xs">
+							<div className="font-bold">{reservedBy || "名前なし"}</div>
+							<div>
+								{formatReservationTimeRange(
+									reservationStartTime,
+									reservationEndTime,
+								)}
+							</div>
+						</div>
+					) : (
+						timeLabel
+					)}
+				</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
 	);
 }
