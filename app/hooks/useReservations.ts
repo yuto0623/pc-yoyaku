@@ -1,18 +1,6 @@
+import type { Reservation } from "@prisma/client";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-
-export type Reservation = {
-	id: string;
-	computerId: string;
-	userName: string;
-	startTime: Date;
-	endTime: Date;
-	notes?: string | null;
-	computer: {
-		id: string;
-		name: string;
-	};
-};
 
 export const useReservations = (date: Date) => {
 	const [reservations, setReservations] = useState<Reservation[]>([]);

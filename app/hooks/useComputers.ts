@@ -1,12 +1,5 @@
+import type { Computer } from "@prisma/client";
 import { useEffect, useState } from "react";
-
-// PC型定義（Prismaモデルと合わせる）
-export type Computer = {
-	id: string;
-	name: string;
-	createdAt?: Date;
-	updatedAt?: Date;
-};
 
 export const useComputers = () => {
 	const [computers, setComputers] = useState<Computer[]>([]);

@@ -1,5 +1,6 @@
 "use client";
 import { Calendar } from "@/components/ui/calendar";
+import type { Computer, Reservation } from "@prisma/client";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useCallback, useEffect, useMemo } from "react";
@@ -7,6 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import ReservationEditForm from "./components/ReservationEditForm/ReservationEditForm";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
+import ReservationList from "./components/ReservationList/ReservationList";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useComputers } from "./hooks/useComputers";
 import { useReservationHelpers } from "./hooks/useReservationHelpers";
@@ -358,6 +360,19 @@ export default function Home() {
 		setIsReservationFormOpen(false);
 	};
 
+	// 予約リストクリック時の処理
+	const handleReservationListClick = (reservation: Reservation) => {
+		// 予約を編集モードで開く
+		setEditingReservation({
+			pcId: reservation.computerId,
+			startTime: reservation.startTime,
+			endTime: reservation.endTime,
+			userName: reservation.userName,
+			notes: reservation.notes || "",
+			id: reservation.id,
+		});
+	};
+
 	return (
 		<div className="container mx-auto p-4">
 			<h1 className="text-2xl font-bold mb-4">PC予約システム</h1>
@@ -378,13 +393,22 @@ export default function Home() {
 			) : (
 				<div className="flex flex-col gap-6">
 					{/* カレンダー */}
-					<div className="mb-6 lg:mb-0">
-						<h2 className="text-lg font-semibold mb-2">日付を選択</h2>
-						<Calendar
-							mode="single"
-							selected={date}
-							onSelect={handleDateChange}
-							className="rounded-md border w-fit"
+					<div className="w-full flex justify-center gap-10 flex-col md:flex-row">
+						<div className="mb-6 lg:mb-0">
+							<h2 className="text-lg font-semibold mb-2">日付を選択</h2>
+							<Calendar
+								mode="single"
+								selected={date}
+								onSelect={handleDateChange}
+								className="rounded-md border w-fit"
+							/>
+						</div>
+						<ReservationList
+							reservations={reservations}
+							pcs={pcs}
+							date={date}
+							loading={loadingReservations}
+							onReservationClick={handleReservationListClick}
 						/>
 					</div>
 
