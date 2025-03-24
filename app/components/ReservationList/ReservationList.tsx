@@ -69,25 +69,6 @@ export default function ReservationList({
 	// 現在時刻
 	const now = new Date();
 
-	// 予約の状態を判断する関数
-	const getReservationStatus = (reservation: Reservation) => {
-		const isToday = new Date(date).toDateString() === new Date().toDateString();
-
-		if (!isToday) {
-			return { status: "scheduled", label: "予定" };
-		}
-
-		if (reservation.endTime < now) {
-			return { status: "completed", label: "終了" };
-		}
-
-		if (reservation.startTime <= now && reservation.endTime > now) {
-			return { status: "active", label: "利用中" };
-		}
-
-		return { status: "upcoming", label: "予定" };
-	};
-
 	return (
 		<Card>
 			<CardHeader>
@@ -118,13 +99,11 @@ export default function ReservationList({
 									<TableHead>時間</TableHead>
 									<TableHead>PC</TableHead>
 									<TableHead>予約者</TableHead>
-									<TableHead>状態</TableHead>
 									<TableHead>メモ</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{sortedReservations.map((reservation) => {
-									const { status, label } = getReservationStatus(reservation);
 									return (
 										<TableRow
 											key={reservation.id}
@@ -137,19 +116,6 @@ export default function ReservationList({
 											</TableCell>
 											<TableCell>{getPcName(reservation.computerId)}</TableCell>
 											<TableCell>{reservation.userName}</TableCell>
-											<TableCell>
-												<Badge
-													variant={
-														status === "active"
-															? "default"
-															: status === "completed"
-																? "outline"
-																: "secondary"
-													}
-												>
-													{label}
-												</Badge>
-											</TableCell>
 											<TableCell className="max-w-[200px] truncate">
 												{reservation.notes || "-"}
 											</TableCell>
