@@ -5,8 +5,8 @@ import { prisma } from "../../../lib/prisma";
 // 予約更新API
 export async function PUT(
 	request: NextRequest,
-	{ params }: { params: { id: string } },
-): Promise<NextResponse> {
+	{ params }: { params: Promise<{ id: string }> },
+) {
 	try {
 		const { id } = await params;
 		const body = await request.json();
@@ -91,7 +91,7 @@ export async function PUT(
 // 予約削除API
 export async function DELETE(
 	_request: NextRequest,
-	{ params }: { params: { id: string } },
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
 		const { id } = await params;
