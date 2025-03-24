@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useTimeSelection } from "./components/hooks/useTimeSelection";
@@ -19,12 +20,6 @@ import { useTimeSlots } from "./components/hooks/useTimeSlots";
 import { useTouchDrag } from "./components/hooks/useTouchDrag";
 import { useComputers } from "./hook/useComputers";
 import { useReservations } from "./hook/useReservations";
-
-// PCタイプの定義
-type PC = {
-	id: string;
-	name: string;
-};
 
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
@@ -241,7 +236,7 @@ export default function Home() {
 			}
 
 			// 予約成功の通知
-			alert("予約が確定しました！");
+			toast("予約が確定しました！");
 
 			// 予約選択をリセット
 			resetSelection();
