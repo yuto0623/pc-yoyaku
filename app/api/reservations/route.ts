@@ -109,9 +109,13 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json(reservations);
 	} catch (error) {
 		console.error("予約取得中にエラーが発生しました:", error);
-		return NextResponse.json(
-			{ error: "予約の取得に失敗しました" },
-			{ status: 500 },
-		);
+
+		// エラーの詳細情報を含める
+		const errorMessage =
+			error instanceof Error
+				? `予約の取得に失敗しました: ${error.message}`
+				: "予約の取得に失敗しました";
+
+		return NextResponse.json({ error: errorMessage }, { status: 500 });
 	}
 }
