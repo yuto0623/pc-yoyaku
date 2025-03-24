@@ -8,11 +8,7 @@ async function main() {
 
 	// サンプルPCデータを挿入
 	await prisma.computer.createMany({
-		data: [
-			{ name: "1号機（白）富士通" },
-			{ name: "2号機（黒）ダイナブック" },
-			{ name: "3号機（シルバー）Lenovo" },
-		],
+		data: [{ name: "1号機（白）富士通" }, { name: "2号機（黒）ダイナブック" }],
 	});
 
 	console.log("シードデータを挿入しました");
