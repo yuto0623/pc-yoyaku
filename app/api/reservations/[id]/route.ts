@@ -2,14 +2,11 @@ import type { Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 
-type RouteParams = {
-	params: {
-		id: string;
-	};
-};
-
 // 予約更新API
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+	request: NextRequest,
+	{ params }: { params: { id: string } },
+): Promise<NextResponse> {
 	try {
 		const { id } = await params;
 		const body = await request.json();
@@ -97,7 +94,7 @@ export async function DELETE(
 	{ params }: { params: { id: string } },
 ) {
 	try {
-		const id = params.id;
+		const { id } = await params;
 
 		// 予約存在確認
 		const existingReservation = await prisma.reservation.findUnique({
