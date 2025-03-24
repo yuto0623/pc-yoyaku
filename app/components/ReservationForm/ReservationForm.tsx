@@ -1,15 +1,17 @@
 import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 import { useState } from "react";
 import type { TimeSelection } from "../../components/hooks/useTimeSelection";
 
@@ -23,6 +25,8 @@ type ReservationFormProps = {
 	pcs: PC[];
 	onConfirm: (userName: string, notes?: string) => Promise<void>;
 	onCancel: () => void;
+	open: boolean; // ダイアログの表示状態
+	onOpenChange: (open: boolean) => void; // ダイアログの表示状態を変更するコールバック
 };
 
 export default function ReservationForm({
@@ -30,21 +34,26 @@ export default function ReservationForm({
 	pcs,
 	onConfirm,
 	onCancel,
+	open,
+	onOpenChange,
 }: ReservationFormProps) {
 	const [userName, setUserName] = useState("");
 	const [notes, setNotes] = useState("");
-	const [submitting, setSubmitting] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// 選択されたPCの情報を取得
 	const selectedPc = pcs.find((pc) => pc.id === selection.pcId);
 
-	// 予約内容が不完全な場合は何も表示しない
-	if (!selection.startTime || !selection.endTime || !selection.pcId) {
-		return null;
-	}
+	// 日本時間でフォーマット
+	const formatJstDate = (date: Date | null) => {
+		return date ? format(date, "yyyy年MM月dd日", { locale: ja }) : "未設定";
+	};
 
-	// フォーム送信処理
+	const formatJstTime = (date: Date | null) => {
+		return date ? format(date, "HH:mm", { locale: ja }) : "未設定";
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
@@ -53,76 +62,99 @@ export default function ReservationForm({
 			return;
 		}
 
+		setIsSubmitting(true);
 		setError(null);
-		setSubmitting(true);
 
 		try {
 			await onConfirm(userName, notes);
-			// 成功したら入力をクリア
+			// 送信成功後にフォームをリセット
 			setUserName("");
 			setNotes("");
+			onOpenChange(false); // ダイアログを閉じる
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "予約処理中にエラーが発生しました",
-			);
+			setError(err instanceof Error ? err.message : "予約の登録に失敗しました");
 		} finally {
-			setSubmitting(false);
+			setIsSubmitting(false);
 		}
 	};
 
+	// キャンセル処理
+	const handleCancel = () => {
+		setUserName("");
+		setNotes("");
+		setError(null);
+		onCancel();
+		onOpenChange(false); // ダイアログを閉じる
+	};
+
 	return (
-		<Card className="mt-4">
-			<form onSubmit={handleSubmit}>
-				<CardHeader>
-					<CardTitle>予約内容</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div>
-						<p>
-							<strong>PC:</strong> {selectedPc?.name}
-						</p>
-						<p>
-							<strong>日時:</strong>{" "}
-							{format(selection.startTime, "yyyy/MM/dd HH:mm")} -
-							{format(selection.endTime, "HH:mm")}
-						</p>
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>予約の確定</DialogTitle>
+					<DialogDescription>
+						選択した時間帯で予約を確定します。
+					</DialogDescription>
+				</DialogHeader>
+
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<div className="space-y-2">
+						<div className="grid grid-cols-[auto_1fr] gap-2 text-sm">
+							<div className="font-medium">PC:</div>
+							<div>{selectedPc?.name}</div>
+
+							<div className="font-medium">日付:</div>
+							<div>{formatJstDate(selection.startTime)}</div>
+
+							<div className="font-medium">時間:</div>
+							<div>
+								{formatJstTime(selection.startTime)} -{" "}
+								{formatJstTime(selection.endTime)}
+							</div>
+						</div>
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="userName">お名前 *</Label>
+						<Label htmlFor="userName">
+							お名前 <span className="text-destructive">*</span>
+						</Label>
 						<Input
 							id="userName"
 							value={userName}
 							onChange={(e) => setUserName(e.target.value)}
-							required
 							placeholder="予約者名"
+							required
 						/>
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="notes">備考</Label>
+						<Label htmlFor="notes">メモ</Label>
 						<Textarea
 							id="notes"
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
-							placeholder="特記事項があればご記入ください"
-							rows={2}
+							placeholder="備考や用件など"
+							rows={3}
 						/>
 					</div>
 
-					{error && (
-						<div className="text-sm font-medium text-destructive">{error}</div>
-					)}
-				</CardContent>
-				<CardFooter className="flex justify-between">
-					<Button type="button" variant="outline" onClick={onCancel}>
-						キャンセル
-					</Button>
-					<Button type="submit" disabled={submitting}>
-						{submitting ? "処理中..." : "この時間で予約する"}
-					</Button>
-				</CardFooter>
-			</form>
-		</Card>
+					{error && <div className="text-destructive text-sm">{error}</div>}
+
+					<DialogFooter className="sm:justify-end">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={handleCancel}
+							disabled={isSubmitting}
+						>
+							キャンセル
+						</Button>
+						<Button type="submit" disabled={isSubmitting}>
+							{isSubmitting ? "送信中..." : "予約を確定"}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	);
 }

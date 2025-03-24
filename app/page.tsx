@@ -24,6 +24,7 @@ import { useReservations } from "./hook/useReservations";
 
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
+	const [isReservationFormOpen, setIsReservationFormOpen] = useState(false);
 
 	// DBからPCデータを取得
 	const { computers: pcs, loading, error } = useComputers();
@@ -237,9 +238,22 @@ export default function Home() {
 		}
 	};
 
-	// 予約フォームをキャンセル
+	// 選択に変更があった場合、ダイアログを開く処理を追加
+	useEffect(() => {
+		if (
+			selection.startTime &&
+			selection.endTime &&
+			selection.pcId &&
+			!isDragging
+		) {
+			setIsReservationFormOpen(true);
+		}
+	}, [selection.startTime, selection.endTime, selection.pcId, isDragging]);
+
+	// 予約フォームキャンセル処理を修正
 	const cancelReservation = () => {
 		resetSelection();
+		setIsReservationFormOpen(false);
 	};
 
 	return (
@@ -379,6 +393,18 @@ export default function Home() {
 								pcs={pcs}
 								onConfirm={confirmReservation}
 								onCancel={cancelReservation}
+								open={
+									isReservationFormOpen &&
+									!!selection.startTime &&
+									!!selection.endTime &&
+									!!selection.pcId
+								}
+								onOpenChange={(open) => {
+									setIsReservationFormOpen(open);
+									if (!open) {
+										cancelReservation();
+									}
+								}}
 							/>
 						)}
 					</div>
