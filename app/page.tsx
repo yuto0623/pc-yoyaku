@@ -254,7 +254,7 @@ export default function Home() {
 		resetSelection();
 	};
 
-	// 予約の開始時間かどうかをチェック
+	// 予約の開始時間かどうかをチェック（改良版）
 	const isReservationStart = (
 		pcId: string,
 		hour: number,
@@ -263,20 +263,24 @@ export default function Home() {
 		const cellTime = new Date(date);
 		cellTime.setHours(hour, minute, 0, 0);
 
-		// 前のセルの時間を計算
-		const prevCellTime = new Date(cellTime);
-		prevCellTime.setMinutes(prevCellTime.getMinutes() - 10); // 10分前
-
-		// このセルが予約されているが、前のセルが予約されていない場合は開始時間
-		return (
-			isCellReserved(pcId, hour, minute) &&
-			!reservations.some(
-				(reservation) =>
-					reservation.computerId === pcId &&
-					prevCellTime >= reservation.startTime &&
-					prevCellTime < reservation.endTime,
-			)
+		// この時間を含む予約を検索
+		const currentReservation = reservations.find(
+			(r) =>
+				r.computerId === pcId &&
+				cellTime >= r.startTime &&
+				cellTime < r.endTime,
 		);
+
+		// 予約がなければfalseを返す
+		if (!currentReservation) return false;
+
+		// 現在の予約の開始時間（分）を10分単位に丸める
+		const resStartHour = currentReservation.startTime.getHours();
+		const resStartMinute =
+			Math.floor(currentReservation.startTime.getMinutes() / 10) * 10;
+
+		// 現在のセルが予約の開始時間と一致するかチェック
+		return resStartHour === hour && resStartMinute + 10 === minute;
 	};
 
 	// 予約情報を取得する関数を追加
