@@ -229,8 +229,6 @@ export default function Home() {
 			return;
 		}
 
-		event.preventDefault(); // スクロールを防止
-
 		const touch = event.touches[0];
 
 		// タッチ位置の要素を取得
