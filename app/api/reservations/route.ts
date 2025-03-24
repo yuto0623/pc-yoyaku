@@ -84,13 +84,25 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		const date = new Date(dateStr);
-		const startOfDay = new Date(date);
-		startOfDay.setHours(0, 0, 0, 0);
+		console.log("検索日付文字列:", dateStr);
 
-		const endOfDay = new Date(date);
-		endOfDay.setHours(23, 59, 59, 999);
+		// UTC考慮したDate処理
+		const inputDate = new Date(dateStr);
+		console.log("解析された日付:", inputDate);
 
+		// 日付のみを抽出（時間情報をリセット）
+		const year = inputDate.getFullYear();
+		const month = inputDate.getMonth();
+		const day = inputDate.getDate();
+
+		// 日付範囲を明示的に設定
+		const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0));
+		const endOfDay = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+
+		console.log("検索開始日時:", startOfDay.toISOString());
+		console.log("検索終了日時:", endOfDay.toISOString());
+
+		// データベース検索
 		const reservations = await prisma.reservation.findMany({
 			where: {
 				startTime: {
@@ -106,16 +118,27 @@ export async function GET(request: NextRequest) {
 			},
 		});
 
+		console.log("取得した予約数:", reservations.length);
 		return NextResponse.json(reservations);
 	} catch (error) {
 		console.error("予約取得中にエラーが発生しました:", error);
-
-		// エラーの詳細情報を含める
 		const errorMessage =
 			error instanceof Error
 				? `予約の取得に失敗しました: ${error.message}`
 				: "予約の取得に失敗しました";
 
-		return NextResponse.json({ error: errorMessage }, { status: 500 });
+		// スタックトレースも含める
+		const stack = error instanceof Error ? error.stack : undefined;
+		return NextResponse.json(
+			{
+				error: errorMessage,
+				stack,
+				env: {
+					nodeEnv: process.env.NODE_ENV,
+					hasDbUrl: !!process.env.DATABASE_URL,
+				},
+			},
+			{ status: 500 },
+		);
 	}
 }
