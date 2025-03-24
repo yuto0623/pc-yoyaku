@@ -53,7 +53,7 @@ export default function TimeSlotCell({
 	// 背景色の決定
 	let backgroundColor: string;
 	if (isReserved) {
-		backgroundColor = "bg-red-200 dark:bg-red-800"; // 予約済み
+		backgroundColor = "bg-green-200 dark:bg-green-800"; // 予約済み
 	} else if (isSelected) {
 		backgroundColor = "bg-blue-200 dark:bg-blue-800"; // 選択中
 	} else {
