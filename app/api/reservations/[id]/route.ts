@@ -11,7 +11,7 @@ type RouteParams = {
 // 予約更新API
 export async function PUT(request: NextRequest, context: RouteParams) {
 	try {
-		const id = context.params.id;
+		const id = await context.params.id;
 		const body = await request.json();
 		const { userName, notes, startTime, endTime } = body;
 
