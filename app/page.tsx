@@ -86,7 +86,12 @@ export default function Home() {
 	);
 
 	// 予約更新処理
-	const updateReservation = async (userName: string, notes?: string) => {
+	const updateReservation = async (
+		userName: string,
+		startTime: Date,
+		endTime: Date,
+		notes?: string,
+	) => {
 		if (!editingReservation?.id) return;
 
 		try {
@@ -100,6 +105,8 @@ export default function Home() {
 					body: JSON.stringify({
 						userName,
 						notes,
+						startTime: startTime.toISOString(),
+						endTime: endTime.toISOString(),
 					}),
 				},
 			);
@@ -109,7 +116,7 @@ export default function Home() {
 				throw new Error(errorData.error || "予約の更新に失敗しました");
 			}
 
-			toast("予約が更新されました");
+			toast.success("予約が更新されました");
 			setEditingReservation(null);
 
 			// 予約一覧を更新
