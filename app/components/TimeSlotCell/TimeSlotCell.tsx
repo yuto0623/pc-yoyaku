@@ -25,12 +25,6 @@ type TimeSlotCellProps = {
 	onTouchStart: (pcId: string, slotIndex: number, pcIndex: number) => void;
 };
 
-// 日本時間でフォーマットする関数
-function formatJstTime(hour: number, minute: number): string {
-	const date = new Date();
-	date.setHours(hour, minute, 0, 0);
-	return format(addHours(date, 9), "HH:mm", { locale: ja });
-}
 export default function TimeSlotCell({
 	pcId,
 	hour,
@@ -88,13 +82,9 @@ export default function TimeSlotCell({
 	): string {
 		if (!startTime || !endTime) return "";
 
-		// 日本時間（JST）に変換
-		const jstStart = new Date(startTime.getTime() + 9 * 60 * 60 * 1000);
-		const jstEnd = new Date(endTime.getTime() + 9 * 60 * 60 * 1000);
-
 		// HH:MM形式でフォーマット
-		const startFormatted = format(jstStart, "HH:mm", { locale: ja });
-		const endFormatted = format(jstEnd, "HH:mm", { locale: ja });
+		const startFormatted = format(startTime, "HH:mm", { locale: ja });
+		const endFormatted = format(endTime, "HH:mm", { locale: ja });
 
 		return `${startFormatted}～${endFormatted}`;
 	}
