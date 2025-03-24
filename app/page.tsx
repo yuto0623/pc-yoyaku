@@ -8,12 +8,12 @@ import { toast } from "sonner";
 import ReservationEditForm from "./components/ReservationEditForm/ReservationEditForm";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
-import { useReservationHelpers } from "./components/hooks/useReservationHelpers";
-import { useTimeSelection } from "./components/hooks/useTimeSelection";
-import { useTimeSlots } from "./components/hooks/useTimeSlots";
-import { useTouchDrag } from "./components/hooks/useTouchDrag";
-import { useComputers } from "./hook/useComputers";
-import { useReservations } from "./hook/useReservations";
+import { useComputers } from "./hooks/useComputers";
+import { useReservationHelpers } from "./hooks/useReservationHelpers";
+import { useReservations } from "./hooks/useReservations";
+import { useTimeSelection } from "./hooks/useTimeSelection";
+import { useTimeSlots } from "./hooks/useTimeSlots";
+import { useTouchDrag } from "./hooks/useTouchDrag";
 
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());

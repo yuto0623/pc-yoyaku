@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useState } from "react";
-import type { TimeSelection } from "../../components/hooks/useTimeSelection";
+import type { TimeSelection } from "../../hooks/useTimeSelection";
 
 type PC = {
 	id: string;
