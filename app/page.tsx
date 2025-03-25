@@ -223,14 +223,6 @@ export default function Home() {
 
 	// ドラッグ終了の処理
 	const handleMouseUp = () => {
-		// if (isDragging && selection.startTime && selection.endTime) {
-		// 	console.log(
-		// 		"予約時間確定:",
-		// 		format(selection.startTime, "HH:mm"),
-		// 		"-",
-		// 		format(selection.endTime, "HH:mm"),
-		// 	);
-		// }
 		endSelection();
 	};
 
