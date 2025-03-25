@@ -5,14 +5,13 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useCallback, useEffect, useMemo } from "react";
 import { useState } from "react";
-import { toast } from "sonner";
 import ReservationEditForm from "./components/ReservationEditForm/ReservationEditForm";
 import ReservationForm from "./components/ReservationForm/ReservationForm";
 import ReservationList from "./components/ReservationList/ReservationList";
 import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
 import { useComputers } from "./hooks/useComputers";
 import { useReservationHelpers } from "./hooks/useReservationHelpers";
-import { useReservations } from "./hooks/useReservations";
+import { useReservationOperations } from "./hooks/useReservationOperations";
 import { useTimeSelection } from "./hooks/useTimeSelection";
 import { useTimeSlots } from "./hooks/useTimeSlots";
 import { useTouchDrag } from "./hooks/useTouchDrag";
@@ -27,10 +26,14 @@ export default function Home() {
 	// 予約データを取得
 	const {
 		reservations,
+		// allReservations,
 		loading: loadingReservations,
-		error: reservationsError,
-		refreshReservations,
-	} = useReservations(date);
+		error: reservationError,
+		createReservation,
+		updateReservation,
+		deleteReservation,
+		status,
+	} = useReservationOperations(date);
 
 	// カスタムフックの使用
 	const {
@@ -88,7 +91,7 @@ export default function Home() {
 	);
 
 	// 予約更新処理
-	const updateReservation = async (
+	const handleUpdateReservation = async (
 		userName: string,
 		startTime: Date,
 		endTime: Date,
@@ -96,64 +99,27 @@ export default function Home() {
 	) => {
 		if (!editingReservation?.id) return;
 
-		try {
-			const response = await fetch(
-				`/api/reservations/${editingReservation.id}`,
-				{
-					method: "PUT",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						userName,
-						notes,
-						startTime: startTime.toISOString(),
-						endTime: endTime.toISOString(),
-					}),
-				},
-			);
+		const result = await updateReservation({
+			id: editingReservation.id,
+			userName,
+			startTime,
+			endTime,
+			notes,
+		});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "予約の更新に失敗しました");
-			}
-
-			toast.success("予約が更新されました");
+		if (result) {
 			setEditingReservation(null);
-
-			// 予約一覧を更新
-			await refreshReservations();
-		} catch (error) {
-			console.error("更新エラー:", error);
-			throw error;
 		}
 	};
 
 	// 予約削除処理
-	const deleteReservation = async () => {
+	const handleDeleteReservation = async () => {
 		if (!editingReservation?.id) return;
 
-		try {
-			const response = await fetch(
-				`/api/reservations/${editingReservation.id}`,
-				{
-					method: "DELETE",
-				},
-			);
+		const result = await deleteReservation(editingReservation.id);
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "予約の削除に失敗しました");
-			}
-
-			toast("予約が削除されました");
+		if (result) {
 			setEditingReservation(null);
-
-			// 予約一覧を更新
-			await refreshReservations();
-		} catch (error) {
-			console.error("削除エラー:", error);
-			throw error;
 		}
 	};
 
@@ -299,46 +265,25 @@ export default function Home() {
 	};
 
 	// 予約を確定する処理
-	const confirmReservation = async (
+	const handleCreateReservation = async (
 		userName: string,
 		startTime: Date,
 		endTime: Date,
 		notes?: string,
 	) => {
-		if (!selection.pcId || !selection.startTime || !selection.endTime) return;
+		if (!selection.pcId) return;
 
-		try {
-			// 予約データをAPIに送信
-			const response = await fetch("/api/reservations", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					computerId: selection.pcId,
-					startTime,
-					endTime,
-					userName,
-					notes,
-				}),
-			});
+		const result = await createReservation({
+			computerId: selection.pcId,
+			userName,
+			startTime,
+			endTime,
+			notes: notes || "",
+		});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "予約の登録に失敗しました");
-			}
-
-			// 予約成功の通知
-			toast("予約が確定しました！");
-
-			// 予約選択をリセット
+		if (result) {
 			resetSelection();
-
-			// 予約一覧を更新
-			await refreshReservations();
-		} catch (error) {
-			console.error("予約エラー:", error);
-			throw error;
+			setIsReservationFormOpen(false);
 		}
 	};
 
@@ -516,8 +461,8 @@ export default function Home() {
 													endTime={editingReservation.endTime}
 													userName={editingReservation.userName}
 													notes={editingReservation.notes}
-													onUpdate={updateReservation}
-													onDelete={deleteReservation}
+													onUpdate={handleUpdateReservation}
+													onDelete={handleDeleteReservation}
 													onCancel={cancelEdit}
 												/>
 											)}
@@ -533,7 +478,7 @@ export default function Home() {
 							<ReservationForm
 								selection={selection}
 								pcs={pcs}
-								onConfirm={confirmReservation}
+								onConfirm={handleCreateReservation}
 								onCancel={resetSelection}
 								open={isReservationFormOpen}
 								onOpenChange={setIsReservationFormOpen}
