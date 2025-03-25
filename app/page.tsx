@@ -397,13 +397,16 @@ export default function Home() {
 								className="rounded-md border w-fit"
 							/>
 						</div>
-						<ReservationList
-							reservations={reservations}
-							pcs={pcs}
-							date={date}
-							loading={loadingReservations}
-							onReservationClick={handleReservationListClick}
-						/>
+						{/* 予約リスト */}
+						<div className="w-full">
+							<ReservationList
+								reservations={reservations}
+								pcs={pcs}
+								date={date}
+								loading={loadingReservations}
+								onReservationClick={handleReservationListClick}
+							/>
+						</div>
 					</div>
 
 					{/* PCと時間のグリッド */}

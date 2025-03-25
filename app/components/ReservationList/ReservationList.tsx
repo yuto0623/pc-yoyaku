@@ -111,7 +111,7 @@ export default function ReservationList({
 											onClick={() => onReservationClick(reservation)}
 										>
 											<TableCell>
-												{format(reservation.startTime, "HH:mm")} -{" "}
+												{format(reservation.startTime, "HH:mm")} ～{" "}
 												{format(reservation.endTime, "HH:mm")}
 											</TableCell>
 											<TableCell>{getPcName(reservation.computerId)}</TableCell>
