@@ -68,7 +68,7 @@ export function useReservationHelpers(date: Date, reservations: Reservation[]) {
 	const getReservationUserName = useCallback(
 		(pcId: string, hour: number, minute: number): string | undefined => {
 			const cellTime = new Date(date);
-			cellTime.setHours(hour, minute, 0, 0);
+			cellTime.setHours(hour, minute - 10, 0, 0);
 
 			// 最適化: インデックスから特定PCの予約だけを検索
 			const pcReservations = reservationIndex.byPc.get(pcId) || [];
@@ -120,7 +120,7 @@ export function useReservationHelpers(date: Date, reservations: Reservation[]) {
 			minute: number,
 		): { startTime?: Date; endTime?: Date } => {
 			const cellTime = new Date(date);
-			cellTime.setHours(hour, minute, 0, 0);
+			cellTime.setHours(hour, minute - 10, 0, 0);
 
 			const pcReservations = reservationIndex.byPc.get(pcId) || [];
 			const reservation = pcReservations.find(
