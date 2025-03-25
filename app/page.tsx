@@ -434,6 +434,8 @@ export default function Home() {
 															slot.minute + 10,
 														).endTime
 													}
+													isDragging={isDragging}
+													isLongPressing={isLongPressing}
 													onMouseDown={handleCellMouseDown}
 													onMouseEnter={handleCellMouseEnter}
 													onTouchStart={handleTouchStart}

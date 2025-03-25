@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/tooltip";
 import { addHours, format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useEffect } from "react";
 
 type TimeSlotCellProps = {
 	pcId: string;
@@ -20,6 +21,8 @@ type TimeSlotCellProps = {
 	reservedBy?: string; // 追加: 予約者名
 	reservationStartTime?: Date;
 	reservationEndTime?: Date;
+	isLongPressing: boolean; // 追加: ロングプレス中かどうか
+	isDragging: boolean; // 追加: ドラッグ中かどうか
 	onMouseDown: (pcId: string, slotIndex: number, pcIndex: number) => void;
 	onMouseEnter: (pcId: string, slotIndex: number) => void;
 	onTouchStart: (pcId: string, slotIndex: number, pcIndex: number) => void;
@@ -45,6 +48,8 @@ export default function TimeSlotCell({
 	reservedBy,
 	reservationStartTime,
 	reservationEndTime,
+	isLongPressing,
+	isDragging,
 	onMouseDown,
 	onMouseEnter,
 	onTouchStart,
@@ -81,13 +86,13 @@ export default function TimeSlotCell({
 		? undefined
 		: () => onTouchStart(pcId, slotIndex, pcIndex);
 
-	const timeLabel = formatJstTime(hour, minute);
-
 	// 日本時間でフォーマットする関数
 	function formatJstTime(hour: number, minute: number): string {
-		const hourStr = hour.toString().padStart(2, "0");
-		const minuteStr = minute.toString().padStart(2, "0");
-		return `${hourStr}:${minuteStr}`;
+		// Date オブジェクトを使って時間計算を行う
+		const date = new Date();
+		date.setHours(hour, minute, 0, 0);
+
+		return format(date, "HH:mm");
 	}
 
 	// 予約の時間範囲を表示する関数
@@ -155,8 +160,10 @@ export default function TimeSlotCell({
 								)}
 							</div>
 						</div>
+					) : isDragging || isLongPressing ? (
+						formatJstTime(hour, minute + 10)
 					) : (
-						timeLabel
+						formatJstTime(hour, minute)
 					)}
 				</TooltipContent>
 			</Tooltip>
