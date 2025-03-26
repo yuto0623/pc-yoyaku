@@ -27,12 +27,23 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useMemo, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { HiOutlineDotsVertical } from "react-icons/hi";
+import ConfirmDeleteDialog from "../ConfirmDeleteDialog/ConfirmDeleteDialog";
 
 type ReservationListProps = {
   allReservations: Reservation[];
   pcs: Computer[];
   loading: boolean;
   onReservationClick: (reservation: Reservation) => void;
+  onDeleteReservation: (id: string) => Promise<void>;
 };
 
 export default function ReservationList({
@@ -40,6 +51,7 @@ export default function ReservationList({
   pcs,
   loading,
   onReservationClick,
+  onDeleteReservation,
 }: ReservationListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "time">("date");
@@ -100,6 +112,45 @@ export default function ReservationList({
   // 現在時刻
   const now = new Date();
 
+  // 削除確認関連のステート
+  const [reservationToDelete, setReservationToDelete] =
+    useState<Reservation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 削除処理
+  const handleDelete = async () => {
+    if (!reservationToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await onDeleteReservation(reservationToDelete.id);
+      // 削除成功時の処理
+    } catch (error) {
+      console.error("予約削除エラー:", error);
+    } finally {
+      setIsDeleting(false);
+      setReservationToDelete(null);
+    }
+  };
+
+  // 削除確認用のテキスト生成関数
+  const getDeleteConfirmationText = (reservation: Reservation) => {
+    const pcName = getPcName(reservation.computerId);
+    const dateTime = format(reservation.startTime, "yyyy年MM月dd日 HH:mm");
+    return (
+      <>
+        <span className="mb-2">
+          {dateTime}～{format(reservation.endTime, "HH:mm")}
+          <br />
+          {pcName}（{reservation.userName}）の予約を削除します。
+        </span>
+        <span className="block text-sm text-muted-foreground">
+          この操作は取り消せません。本当に削除しますか？
+        </span>
+      </>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -150,6 +201,7 @@ export default function ReservationList({
                     <TableHead>PC</TableHead>
                     <TableHead>予約者</TableHead>
                     <TableHead>メモ</TableHead>
+                    <TableHead>編集</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -162,10 +214,9 @@ export default function ReservationList({
                     return (
                       <TableRow
                         key={reservation.id}
-                        className={`cursor-pointer hover:bg-muted/50 transition-colors
+                        className={`
                         ${isPast ? "text-muted-foreground" : ""}
                         ${isActive ? "bg-green-50 dark:bg-green-950/20" : ""}`}
-                        onClick={() => onReservationClick(reservation)}
                       >
                         <TableCell>
                           {format(reservation.startTime, "yyyy/MM/dd(eee)", {
@@ -183,9 +234,47 @@ export default function ReservationList({
                         <TableCell className="max-w-[200px] truncate">
                           {reservation.notes || "-"}
                         </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="cursor-pointer transition-all px-1 hover:opacity-70">
+                              <HiOutlineDotsVertical size={20} />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem
+                                onClick={() => onReservationClick(reservation)}
+                              >
+                                編集
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-700 dark:text-red-400"
+                                onClick={() =>
+                                  setReservationToDelete(reservation)
+                                }
+                              >
+                                削除
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
+                  {/* 削除確認ダイアログ - 共通コンポーネントを使用 */}
+                  <ConfirmDeleteDialog
+                    open={!!reservationToDelete}
+                    onOpenChange={(open) => {
+                      if (!open) setReservationToDelete(null);
+                    }}
+                    title="予約を削除しますか？"
+                    description={
+                      reservationToDelete
+                        ? getDeleteConfirmationText(reservationToDelete)
+                        : ""
+                    }
+                    isSubmitting={isDeleting}
+                    onConfirm={handleDelete}
+                  />
                 </TableBody>
               </Table>
             </div>

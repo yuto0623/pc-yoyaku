@@ -48,11 +48,11 @@ export default function Home() {
   // 予約編集用のステートを追加
   const [editingReservation, setEditingReservation] = useState<{
     pcId: string;
-    startTime?: Date;
-    endTime?: Date;
-    userName?: string;
-    notes?: string;
-    id?: string;
+    startTime: Date;
+    endTime: Date;
+    userName: string;
+    notes: string;
+    id: string;
   } | null>(null);
 
   // 予約クリック時の処理を追加
@@ -113,10 +113,10 @@ export default function Home() {
   };
 
   // 予約削除処理
-  const handleDeleteReservation = async () => {
-    if (!editingReservation?.id) return;
+  const handleDeleteReservation = async (id: string) => {
+    if (!id) return;
 
-    const result = await deleteReservation(editingReservation.id);
+    const result = await deleteReservation(id);
 
     if (result) {
       setEditingReservation(null);
@@ -341,6 +341,7 @@ export default function Home() {
                 pcs={pcs}
                 loading={loadingReservations}
                 onReservationClick={handleReservationListClick}
+                onDeleteReservation={handleDeleteReservation}
               />
             </div>
           </div>
@@ -448,12 +449,8 @@ export default function Home() {
                             onOpenChange={(open) => {
                               if (!open) setEditingReservation(null);
                             }}
-                            pcId={editingReservation.pcId}
                             pcs={pcs}
-                            startTime={editingReservation.startTime}
-                            endTime={editingReservation.endTime}
-                            userName={editingReservation.userName}
-                            notes={editingReservation.notes}
+                            editingReservation={editingReservation}
                             onUpdate={handleUpdateReservation}
                             onDelete={handleDeleteReservation}
                             onCancel={cancelEdit}
