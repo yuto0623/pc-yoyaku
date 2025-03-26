@@ -26,7 +26,7 @@ export default function Home() {
   // 予約データを取得
   const {
     reservations,
-    // allReservations,
+    allReservations,
     loading: loadingReservations,
     error: errorReservations,
     createReservation,
@@ -336,9 +336,8 @@ export default function Home() {
             {/* 予約リスト */}
             <div className="w-full">
               <ReservationList
-                reservations={reservations}
+                allReservations={allReservations}
                 pcs={pcs}
-                date={date}
                 loading={loadingReservations}
                 onReservationClick={handleReservationListClick}
               />
