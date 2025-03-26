@@ -26,6 +26,7 @@ import type { Computer, Reservation } from "@prisma/client";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useMemo, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ReservationListProps = {
   allReservations: Reservation[];
@@ -132,63 +133,69 @@ export default function ReservationList({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="h-65 overflow-y-auto">
-        {loading ? (
-          <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-            <span className="ml-2">予約データを読み込み中...</span>
-          </div>
-        ) : sortedReservations.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="sticky top-0">
-                <TableRow>
-                  <TableHead>日付</TableHead>
-                  <TableHead>時間</TableHead>
-                  <TableHead>PC</TableHead>
-                  <TableHead>予約者</TableHead>
-                  <TableHead>メモ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedReservations.map((reservation) => {
-                  // 予約の状態を判定
-                  const isPast = reservation.endTime < now;
-                  const isActive =
-                    reservation.startTime <= now && now < reservation.endTime;
+      <ScrollArea className="h-65">
+        <CardContent className="">
+          {loading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              <span className="ml-2">予約データを読み込み中...</span>
+            </div>
+          ) : sortedReservations.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0">
+                  <TableRow>
+                    <TableHead>日付</TableHead>
+                    <TableHead>時間</TableHead>
+                    <TableHead>PC</TableHead>
+                    <TableHead>予約者</TableHead>
+                    <TableHead>メモ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedReservations.map((reservation) => {
+                    // 予約の状態を判定
+                    const isPast = reservation.endTime < now;
+                    const isActive =
+                      reservation.startTime <= now && now < reservation.endTime;
 
-                  return (
-                    <TableRow
-                      key={reservation.id}
-                      className={`cursor-pointer hover:bg-muted/50 transition-colors
+                    return (
+                      <TableRow
+                        key={reservation.id}
+                        className={`cursor-pointer hover:bg-muted/50 transition-colors
                         ${isPast ? "text-muted-foreground" : ""}
                         ${isActive ? "bg-green-50 dark:bg-green-950/20" : ""}`}
-                      onClick={() => onReservationClick(reservation)}
-                    >
-                      <TableCell>
-                        {format(reservation.startTime, "yyyy/MM/dd(eee)", {
-                          locale: ja,
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        {format(reservation.startTime, "HH:mm")} ～{" "}
-                        {format(reservation.endTime, "HH:mm")}
-                      </TableCell>
-                      <TableCell>{getPcName(reservation.computerId)}</TableCell>
-                      <TableCell>{reservation.userName}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {reservation.notes || "-"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="text-center py-4 text-gray-500">予約はありません</div>
-        )}
-      </CardContent>
+                        onClick={() => onReservationClick(reservation)}
+                      >
+                        <TableCell>
+                          {format(reservation.startTime, "yyyy/MM/dd(eee)", {
+                            locale: ja,
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          {format(reservation.startTime, "HH:mm")} ～{" "}
+                          {format(reservation.endTime, "HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          {getPcName(reservation.computerId)}
+                        </TableCell>
+                        <TableCell>{reservation.userName}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {reservation.notes || "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              予約はありません
+            </div>
+          )}
+        </CardContent>
+      </ScrollArea>
     </Card>
   );
 }
