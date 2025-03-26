@@ -33,6 +33,11 @@ type UpdateReservationParams = {
 	notes?: string;
 };
 
+type AllReservationsResponse = {
+  reservations: Reservation[];
+  byDate: Record<string, Reservation[]>;
+  totalCount: number;
+};
 /**
  * 予約の取得・作成・更新・削除を一元管理するカスタムフック
  */
@@ -111,34 +116,42 @@ export function useReservationOperations(date: Date) {
 	/**
 	 * すべての予約を取得
 	 */
-	const fetchAllReservations = useCallback(async () => {
-		try {
-			setStatus((prev) => ({ ...prev, isFetching: true }));
-			setErrors((prev) => ({ ...prev, fetchError: null }));
+const fetchAllReservations = useCallback(async (): Promise<AllReservationsResponse> => {
+  try {
+    setStatus((prev) => ({ ...prev, isFetching: true }));
+    setErrors((prev) => ({ ...prev, fetchError: null }));
+    
+    const response = await fetch("/api/reservations/all");
 
-			const response = await fetch("/api/reservations/all");
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `API Error: ${response.status}`);
+    }
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `API Error: ${response.status}`);
-			}
-
-			const data = await response.json();
-			const formattedData = convertDates(data);
-			setAllReservations(formattedData);
-
-			return formattedData;
-		} catch (err) {
-			console.error("全予約取得エラー:", err);
-			const errorMessage =
-				err instanceof Error ? err.message : "予約データの取得に失敗しました";
-			setErrors((prev) => ({ ...prev, fetchError: errorMessage }));
-
-			return [];
-		} finally {
-			setStatus((prev) => ({ ...prev, isFetching: false }));
-		}
-	}, [convertDates]);
+    const data = await response.json();
+    const formattedData = {
+      reservations: convertDates(data.reservations),
+      byDate: Object.entries(data.byDate).reduce((acc, [date, reservations]) => {
+        acc[date] = convertDates(reservations as any[]);
+        return acc;
+      }, {} as Record<string, Reservation[]>),
+      totalCount: data.totalCount
+    };
+    
+    setAllReservations(formattedData.reservations);
+    
+    return formattedData;
+  } catch (err) {
+    console.error("全予約取得エラー:", err);
+    const errorMessage =
+      err instanceof Error ? err.message : "予約データの取得に失敗しました";
+    setErrors((prev) => ({ ...prev, fetchError: errorMessage }));
+    
+    return { reservations: [], byDate: {}, totalCount: 0 };
+  } finally {
+    setStatus((prev) => ({ ...prev, isFetching: false }));
+  }
+}, [convertDates]);
 
 	/**
 	 * 予約を作成

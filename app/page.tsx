@@ -23,6 +23,8 @@ export default function Home() {
 	// DBからPCデータを取得
 	const { computers: pcs, loading, error } = useComputers();
 
+	
+
 	// 予約データを取得
 	const {
 		reservations,
@@ -32,6 +34,7 @@ export default function Home() {
 		createReservation,
 		updateReservation,
 		deleteReservation,
+		// fetchAllReservations,
 		status,
 	} = useReservationOperations(date);
 
