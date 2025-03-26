@@ -5,16 +5,16 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useCallback, useEffect, useMemo } from "react";
 import { useState } from "react";
+import ReservationEditForm from "../components/ReservationEditForm/ReservationEditForm";
+import ReservationForm from "../components/ReservationForm/ReservationForm";
 import { useComputers } from "../hooks/useComputers";
 import { useReservationHelpers } from "../hooks/useReservationHelpers";
 import { useReservationOperations } from "../hooks/useReservationOperations";
 import { useTimeSelection } from "../hooks/useTimeSelection";
 import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useTouchDrag } from "../hooks/useTouchDrag";
-import ReservationEditForm from "./components/ReservationEditForm/ReservationEditForm";
-import ReservationForm from "./components/ReservationForm/ReservationForm";
-import ReservationList from "./components/ReservationList/ReservationList";
-import TimeSlotCell from "./components/TimeSlotCell/TimeSlotCell";
+import ReservationList from "../components/ReservationList/ReservationList";
+import TimeSlotCell from "../components/TimeSlotCell/TimeSlotCell";
 
 export default function Home() {
 	const [date, setDate] = useState<Date>(new Date());
