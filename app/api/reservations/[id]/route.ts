@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { type NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../../../lib/prisma";
 
 // 予約更新API
 export async function PUT(

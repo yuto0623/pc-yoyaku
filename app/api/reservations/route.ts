@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 // 予約を作成するAPI
 export async function POST(request: NextRequest) {
