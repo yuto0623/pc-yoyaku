@@ -184,7 +184,7 @@ export default function ReservationList({
           </div>
         </div>
       </CardHeader>
-      <ScrollArea className="h-65">
+      <ScrollArea className="h-68">
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center p-4">
