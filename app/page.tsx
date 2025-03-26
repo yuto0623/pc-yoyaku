@@ -15,6 +15,7 @@ import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useTouchDrag } from "../hooks/useTouchDrag";
 import ReservationList from "../components/ReservationList/ReservationList";
 import TimeSlotCell from "../components/TimeSlotCell/TimeSlotCell";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export default function Home() {
   const [date, setDate] = useState<Date>(new Date());
@@ -354,115 +355,117 @@ export default function Home() {
             <p className="text-sm text-gray-500 mb-2 md:hidden">
               長押し（0.5秒）してからドラッグで時間を選択できます
             </p>
-
-            <div className="overflow-x-auto" ref={gridRef}>
-              <div className="min-w-full" style={{ minWidth: "1600px" }}>
-                {/* 時間ヘッダー - 1時間単位 */}
-                <div className="flex">
-                  <div className="w-24 border-r border-b p-2 font-medium bg-gray-50 dark:bg-gray-700 sticky left-0">
-                    PC
+            <ScrollArea>
+              <div ref={gridRef}>
+                <div className="min-w-full" style={{ minWidth: "1600px" }}>
+                  {/* 時間ヘッダー - 1時間単位 */}
+                  <div className="flex">
+                    <div className="w-24 border-r border-b p-2 font-medium bg-gray-50 dark:bg-gray-700 sticky left-0">
+                      PC
+                    </div>
+                    {hourHeaders.map((hour) => (
+                      <div
+                        key={hour}
+                        className="w-[60px] flex-shrink-0 border-r border-b p-2 text-center font-medium bg-gray-50 dark:bg-gray-700"
+                      >
+                        {`${hour.toString().padStart(2, "0")}:00`}
+                      </div>
+                    ))}
                   </div>
-                  {hourHeaders.map((hour) => (
-                    <div
-                      key={hour}
-                      className="w-[60px] flex-shrink-0 border-r border-b p-2 text-center font-medium bg-gray-50 dark:bg-gray-700"
-                    >
-                      {`${hour.toString().padStart(2, "0")}:00`}
+
+                  {/* PC行 */}
+                  {pcs.map((pc, pcIndex) => (
+                    <div key={pc.id} className="flex">
+                      {/* PC情報 */}
+                      <div className="w-24 border-r border-b p-2 bg-gray-50 dark:bg-gray-700 sticky left-0 z-20">
+                        <div className="font-medium">{pc.name}</div>
+                      </div>
+
+                      {/* 時間セル - 10分単位 */}
+                      <div
+                        className="flex"
+                        onTouchMove={handleTouchMove}
+                        onContextMenu={(e) => {
+                          // 長押し中に右クリックメニューが出るのを防止
+                          if (isLongPressing) e.preventDefault();
+                        }}
+                      >
+                        {timeSlots.map((slot, slotIndex) => (
+                          <TimeSlotCell
+                            key={`${pc.id}-${slot.hour}-${slot.minute}`}
+                            pcId={pc.id}
+                            hour={slot.hour}
+                            minute={slot.minute}
+                            slotIndex={slotIndex}
+                            pcIndex={pcIndex}
+                            isSelected={isCellSelected(
+                              pc.id,
+                              slot.hour,
+                              slot.minute
+                            )}
+                            isHourStart={slot.minute === 0}
+                            startTime={isReservationStart(
+                              pc.id,
+                              slot.hour,
+                              slot.minute + 10
+                            )}
+                            isReserved={isCellReserved(
+                              pc.id,
+                              slot.hour,
+                              slot.minute + 10
+                            )}
+                            reservedBy={getReservationUserName(
+                              pc.id,
+                              slot.hour,
+                              slot.minute + 10
+                            )}
+                            reservationStartTime={
+                              getReservationTimes(
+                                pc.id,
+                                slot.hour,
+                                slot.minute + 10
+                              ).startTime
+                            }
+                            reservationEndTime={
+                              getReservationTimes(
+                                pc.id,
+                                slot.hour,
+                                slot.minute + 10
+                              ).endTime
+                            }
+                            isDragging={isDragging}
+                            isLongPressing={isLongPressing}
+                            onMouseDown={handleCellMouseDown}
+                            onMouseEnter={handleCellMouseEnter}
+                            onTouchStart={handleTouchStart}
+                            onReservationClick={handleReservationClick}
+                          />
+                        ))}
+                        {/* 予約編集フォームを追加 */}
+                        {editingReservation && (
+                          <ReservationEditForm
+                            open={!!editingReservation}
+                            onOpenChange={(open) => {
+                              if (!open) setEditingReservation(null);
+                            }}
+                            pcId={editingReservation.pcId}
+                            pcs={pcs}
+                            startTime={editingReservation.startTime}
+                            endTime={editingReservation.endTime}
+                            userName={editingReservation.userName}
+                            notes={editingReservation.notes}
+                            onUpdate={handleUpdateReservation}
+                            onDelete={handleDeleteReservation}
+                            onCancel={cancelEdit}
+                          />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-
-                {/* PC行 */}
-                {pcs.map((pc, pcIndex) => (
-                  <div key={pc.id} className="flex">
-                    {/* PC情報 */}
-                    <div className="w-24 border-r border-b p-2 bg-gray-50 dark:bg-gray-700 sticky left-0 z-20">
-                      <div className="font-medium">{pc.name}</div>
-                    </div>
-
-                    {/* 時間セル - 10分単位 */}
-                    <div
-                      className="flex"
-                      onTouchMove={handleTouchMove}
-                      onContextMenu={(e) => {
-                        // 長押し中に右クリックメニューが出るのを防止
-                        if (isLongPressing) e.preventDefault();
-                      }}
-                    >
-                      {timeSlots.map((slot, slotIndex) => (
-                        <TimeSlotCell
-                          key={`${pc.id}-${slot.hour}-${slot.minute}`}
-                          pcId={pc.id}
-                          hour={slot.hour}
-                          minute={slot.minute}
-                          slotIndex={slotIndex}
-                          pcIndex={pcIndex}
-                          isSelected={isCellSelected(
-                            pc.id,
-                            slot.hour,
-                            slot.minute
-                          )}
-                          isHourStart={slot.minute === 0}
-                          startTime={isReservationStart(
-                            pc.id,
-                            slot.hour,
-                            slot.minute + 10
-                          )}
-                          isReserved={isCellReserved(
-                            pc.id,
-                            slot.hour,
-                            slot.minute + 10
-                          )}
-                          reservedBy={getReservationUserName(
-                            pc.id,
-                            slot.hour,
-                            slot.minute + 10
-                          )}
-                          reservationStartTime={
-                            getReservationTimes(
-                              pc.id,
-                              slot.hour,
-                              slot.minute + 10
-                            ).startTime
-                          }
-                          reservationEndTime={
-                            getReservationTimes(
-                              pc.id,
-                              slot.hour,
-                              slot.minute + 10
-                            ).endTime
-                          }
-                          isDragging={isDragging}
-                          isLongPressing={isLongPressing}
-                          onMouseDown={handleCellMouseDown}
-                          onMouseEnter={handleCellMouseEnter}
-                          onTouchStart={handleTouchStart}
-                          onReservationClick={handleReservationClick}
-                        />
-                      ))}
-                      {/* 予約編集フォームを追加 */}
-                      {editingReservation && (
-                        <ReservationEditForm
-                          open={!!editingReservation}
-                          onOpenChange={(open) => {
-                            if (!open) setEditingReservation(null);
-                          }}
-                          pcId={editingReservation.pcId}
-                          pcs={pcs}
-                          startTime={editingReservation.startTime}
-                          endTime={editingReservation.endTime}
-                          userName={editingReservation.userName}
-                          notes={editingReservation.notes}
-                          onUpdate={handleUpdateReservation}
-                          onDelete={handleDeleteReservation}
-                          onCancel={cancelEdit}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
-            </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
             {/* 選択情報の表示 */}
             {/* 選択情報の表示 - ReservationFormに置き換え */}
