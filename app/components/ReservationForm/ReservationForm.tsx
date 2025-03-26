@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, parse, setHours, setMinutes } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useEffect, useState } from "react";
-import type { TimeSelection } from "../../hooks/useTimeSelection";
+import type { TimeSelection } from "../../../hooks/useTimeSelection";
 
 type PC = {
 	id: string;
