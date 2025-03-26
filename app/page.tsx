@@ -30,12 +30,10 @@ export default function Home() {
 		reservations,
 		// allReservations,
 		loading: loadingReservations,
-		error: reservationError,
+		error: errorReservations,
 		createReservation,
 		updateReservation,
 		deleteReservation,
-		// fetchAllReservations,
-		status,
 	} = useReservationOperations(date);
 
 	// カスタムフックの使用

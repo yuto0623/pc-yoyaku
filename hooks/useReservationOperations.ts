@@ -1,361 +1,269 @@
+// hooks/useReservationOperations.ts
 import type { Reservation } from "@prisma/client";
 import { format } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
-
-type ReservationOperationStatus = {
-	isFetching: boolean;
-	isCreating: boolean;
-	isUpdating: boolean;
-	isDeleting: boolean;
-};
-
-type ReservationOperationErrors = {
-	fetchError: string | null;
-	createError: string | null;
-	updateError: string | null;
-	deleteError: string | null;
-};
-
-type CreateReservationParams = {
-	computerId: string;
-	userName: string;
-	startTime: Date;
-	endTime: Date;
-	notes?: string;
-};
-
-type UpdateReservationParams = {
-	id: string;
-	userName: string;
-	startTime: Date;
-	endTime: Date;
-	notes?: string;
-};
 
 type AllReservationsResponse = {
   reservations: Reservation[];
   byDate: Record<string, Reservation[]>;
   totalCount: number;
 };
+
+type ApiAction = {
+  method: string;
+  url: string;
+  body?: any;
+  successMessage?: string;
+  errorMessage?: string;
+};
+
+// 日付をISO文字列から変換する汎用関数
+const convertDates = (data: any[]): Reservation[] => {
+  return data.map((item) => ({
+    ...item,
+    startTime: new Date(item.startTime),
+    endTime: new Date(item.endTime),
+  }));
+};
+
 /**
  * 予約の取得・作成・更新・削除を一元管理するカスタムフック
  */
 export function useReservationOperations(date: Date) {
-	// 予約データと状態
-	const [reservations, setReservations] = useState<Reservation[]>([]);
-	const [allReservations, setAllReservations] = useState<Reservation[]>([]);
+  // 日別および全予約のステート
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [allReservationsData, setAllReservationsData] = useState<AllReservationsResponse | null>(null);
+  
+  // 操作状態のステート（単一のオブジェクトに統合）
+  const [apiState, setApiState] = useState({
+    loading: false,
+    error: null as string | null,
+  });
 
-	// 操作の状態
-	const [status, setStatus] = useState<ReservationOperationStatus>({
-		isFetching: false,
-		isCreating: false,
-		isUpdating: false,
-		isDeleting: false,
-	});
-
-	// エラー状態
-	const [errors, setErrors] = useState<ReservationOperationErrors>({
-		fetchError: null,
-		createError: null,
-		updateError: null,
-		deleteError: null,
-	});
-
-	/**
-	 * Date型をISO文字列から変換する
-	 */
-	type RawReservation = Omit<Reservation, "startTime" | "endTime"> & {
-		startTime: string;
-		endTime: string;
-	};
-
-	const convertDates = useCallback((data: RawReservation[]): Reservation[] => {
-		return data.map((item) => ({
-			...item,
-			startTime: new Date(item.startTime),
-			endTime: new Date(item.endTime),
-		}));
-	}, []);
-
-	/**
-	 * 特定の日付の予約を取得
-	 */
-	const fetchReservations = useCallback(async () => {
-		try {
-			setStatus((prev) => ({ ...prev, isFetching: true }));
-			setErrors((prev) => ({ ...prev, fetchError: null }));
-
-			// 日本時間の日付をYYYY-MM-DD形式で取得
-			const dateStr = format(date, "yyyy-MM-dd");
-
-			const response = await fetch(`/api/reservations?date=${dateStr}`);
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `API Error: ${response.status}`);
-			}
-
-			const data = await response.json();
-			const formattedData = convertDates(data);
-			setReservations(formattedData);
-
-			return formattedData;
-		} catch (err) {
-			console.error("予約取得エラー:", err);
-			const errorMessage =
-				err instanceof Error ? err.message : "予約データの取得に失敗しました";
-			setErrors((prev) => ({ ...prev, fetchError: errorMessage }));
-
-			return [];
-		} finally {
-			setStatus((prev) => ({ ...prev, isFetching: false }));
-		}
-	}, [date, convertDates]);
-
-	/**
-	 * すべての予約を取得
-	 */
-const fetchAllReservations = useCallback(async (): Promise<AllReservationsResponse> => {
-  try {
-    setStatus((prev) => ({ ...prev, isFetching: true }));
-    setErrors((prev) => ({ ...prev, fetchError: null }));
+  /**
+   * API呼び出しの汎用関数
+   */
+  const callApi = async ({ method, url, body, successMessage, errorMessage }: ApiAction) => {
+    setApiState({ loading: true, error: null });
     
-    const response = await fetch("/api/reservations/all");
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `API Error: ${response.status}`);
+    try {
+      const options: RequestInit = { method };
+      
+      if (body) {
+        options.headers = { "Content-Type": "application/json" };
+        options.body = JSON.stringify(body);
+      }
+      
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API Error: ${response.status}`);
+      }
+      
+      if (successMessage) {
+        toast.success(successMessage);
+      }
+      
+      return await response.json();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : errorMessage || "操作に失敗しました";
+      setApiState(prev => ({ ...prev, error: message }));
+      toast.error(message);
+      throw err;
+    } finally {
+      setApiState(prev => ({ ...prev, loading: false }));
     }
+  };
 
-    const data = await response.json();
-    const formattedData = {
-      reservations: convertDates(data.reservations),
-      byDate: Object.entries(data.byDate).reduce((acc, [date, reservations]) => {
-        acc[date] = convertDates(reservations as any[]);
-        return acc;
-      }, {} as Record<string, Reservation[]>),
-      totalCount: data.totalCount
-    };
+  /**
+   * 特定日の予約を取得
+   */
+ const _fetchReservations = useCallback(async () => {
+    try {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const data = await callApi({
+        method: "GET",
+        url: `/api/reservations?date=${dateStr}`,
+        errorMessage: "予約データの取得に失敗しました",
+      });
+      
+      const formattedData = convertDates(data);
+      setReservations(formattedData);
+      return formattedData;
+    } catch (err) {
+      console.error("予約取得エラー:", err);
+      return [];
+    }
+  }, [date]);
+
+  /**
+   * すべての予約を取得
+   */
+  const _fetchAllReservations = useCallback(async () => {
+    try {
+      const data = await callApi({
+        method: "GET",
+        url: "/api/reservations/all",
+        errorMessage: "全予約データの取得に失敗しました",
+      });
+      
+      const formattedData = {
+        reservations: convertDates(data.reservations),
+        byDate: Object.entries(data.byDate).reduce((acc, [date, reservations]) => {
+          acc[date] = convertDates(reservations as any[]);
+          return acc;
+        }, {} as Record<string, Reservation[]>),
+        totalCount: data.totalCount,
+      };
+      
+      setAllReservationsData(formattedData);
+      return formattedData;
+    } catch (err) {
+      console.error("全予約取得エラー:", err);
+      return { reservations: [], byDate: {}, totalCount: 0 };
+    }
+	}, []);
+	
+	 /**
+   * 両方のデータセットを更新する公開関数
+   */
+  const refreshAllData = useCallback(async () => {
+    setApiState(prev => ({ ...prev, loading: true }));
+    try {
+      await Promise.all([
+        _fetchReservations(),
+        _fetchAllReservations()
+      ]);
+      return true;
+    } catch (err) {
+      console.error("データ更新エラー:", err);
+      return false;
+    } finally {
+      setApiState(prev => ({ ...prev, loading: false }));
+    }
+  }, [_fetchReservations, _fetchAllReservations]);
+  
+
+  /**
+   * 予約を作成
+   */
+  const createReservation = useCallback(async ({ 
+    computerId, 
+    userName, 
+    startTime, 
+    endTime, 
+    notes 
+  }: {
+    computerId: string;
+    userName: string;
+    startTime: Date;
+    endTime: Date;
+    notes?: string;
+  }) => {
+    try {
+      await callApi({
+        method: "POST",
+        url: "/api/reservations",
+        body: {
+          computerId,
+          userName,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          notes,
+        },
+        successMessage: "予約を作成しました！",
+        errorMessage: "予約の登録に失敗しました",
+      });
+      
+      // 予約リストを更新
+		 await refreshAllData();
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }, [refreshAllData]);
+
+  /**
+   * 予約を更新
+   */
+  const updateReservation = useCallback(async ({ 
+    id, 
+    userName, 
+    startTime, 
+    endTime, 
+    notes 
+  }: {
+    id: string;
+    userName: string;
+    startTime: Date;
+    endTime: Date;
+    notes?: string;
+  }) => {
+    try {
+      await callApi({
+        method: "PUT",
+        url: `/api/reservations/${id}`,
+        body: {
+          userName,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          notes,
+        },
+        successMessage: "予約を更新しました",
+        errorMessage: "予約の更新に失敗しました",
+      });
+      
+      // 予約リストを更新
+			await refreshAllData();
+
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }, [refreshAllData]);
+
+  /**
+   * 予約を削除
+   */
+  const deleteReservation = useCallback(async (id: string) => {
+    try {
+      await callApi({
+        method: "DELETE",
+        url: `/api/reservations/${id}`,
+        successMessage: "予約を削除しました",
+        errorMessage: "予約の削除に失敗しました",
+      });
+      
+      // 予約リストを更新
+			await refreshAllData();
+
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }, [refreshAllData]);
+
+  // 初期読み込み
+  useEffect(() => {
+		refreshAllData();
+  }, [date, refreshAllData]);
+
+  return {
+    // データ
+    reservations,
+    allReservations: allReservationsData?.reservations || [],
+    allReservationsByDate: allReservationsData?.byDate || {},
     
-    setAllReservations(formattedData.reservations);
+    // メソッド
+    refreshData: refreshAllData,
+    createReservation,
+    updateReservation,
+    deleteReservation,
     
-    return formattedData;
-  } catch (err) {
-    console.error("全予約取得エラー:", err);
-    const errorMessage =
-      err instanceof Error ? err.message : "予約データの取得に失敗しました";
-    setErrors((prev) => ({ ...prev, fetchError: errorMessage }));
-    
-    return { reservations: [], byDate: {}, totalCount: 0 };
-  } finally {
-    setStatus((prev) => ({ ...prev, isFetching: false }));
-  }
-}, [convertDates]);
-
-	/**
-	 * 予約を作成
-	 */
-	const createReservation = useCallback(
-		async ({
-			computerId,
-			userName,
-			startTime,
-			endTime,
-			notes,
-		}: CreateReservationParams) => {
-			try {
-				setStatus((prev) => ({ ...prev, isCreating: true }));
-				setErrors((prev) => ({ ...prev, createError: null }));
-
-				const response = await fetch("/api/reservations", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						computerId,
-						userName,
-						startTime: startTime.toISOString(),
-						endTime: endTime.toISOString(),
-						notes,
-					}),
-				});
-
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || "予約の登録に失敗しました");
-				}
-
-				// 成功通知
-				toast.success("予約を作成しました！");
-
-				// 予約リストを更新
-				await fetchReservations();
-				// await fetchAllReservations();
-
-				// 成功
-				return true;
-			} catch (err) {
-				console.error("予約作成エラー:", err);
-				const errorMessage =
-					err instanceof Error ? err.message : "予約の登録に失敗しました";
-
-				setErrors((prev) => ({ ...prev, createError: errorMessage }));
-				toast.error(errorMessage);
-
-				return false;
-			} finally {
-				setStatus((prev) => ({ ...prev, isCreating: false }));
-			}
-		},
-		[
-			fetchReservations,
-			// fetchAllReservations
-		],
-	);
-
-	/**
-	 * 予約を更新
-	 */
-	const updateReservation = useCallback(
-		async ({
-			id,
-			userName,
-			startTime,
-			endTime,
-			notes,
-		}: UpdateReservationParams) => {
-			try {
-				setStatus((prev) => ({ ...prev, isUpdating: true }));
-				setErrors((prev) => ({ ...prev, updateError: null }));
-
-				const response = await fetch(`/api/reservations/${id}`, {
-					method: "PUT",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						userName,
-						startTime: startTime.toISOString(),
-						endTime: endTime.toISOString(),
-						notes,
-					}),
-				});
-
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || "予約の更新に失敗しました");
-				}
-
-				// 成功通知
-				toast.success("予約を更新しました");
-
-				// 予約リストを更新
-				await fetchReservations();
-				// await fetchAllReservations();
-
-				return true;
-			} catch (err) {
-				console.error("予約更新エラー:", err);
-				const errorMessage =
-					err instanceof Error ? err.message : "予約の更新に失敗しました";
-
-				setErrors((prev) => ({ ...prev, updateError: errorMessage }));
-				toast.error(errorMessage);
-
-				return false;
-			} finally {
-				setStatus((prev) => ({ ...prev, isUpdating: false }));
-			}
-		},
-		[
-			fetchReservations,
-			// fetchAllReservations
-		],
-	);
-
-	/**
-	 * 予約を削除
-	 */
-	const deleteReservation = useCallback(
-		async (id: string) => {
-			try {
-				setStatus((prev) => ({ ...prev, isDeleting: true }));
-				setErrors((prev) => ({ ...prev, deleteError: null }));
-
-				const response = await fetch(`/api/reservations/${id}`, {
-					method: "DELETE",
-				});
-
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || "予約の削除に失敗しました");
-				}
-
-				// 成功通知
-				toast.success("予約を削除しました");
-
-				// 予約リストを更新
-				await fetchReservations();
-				// await fetchAllReservations();
-
-				return true;
-			} catch (err) {
-				console.error("予約削除エラー:", err);
-				const errorMessage =
-					err instanceof Error ? err.message : "予約の削除に失敗しました";
-
-				setErrors((prev) => ({ ...prev, deleteError: errorMessage }));
-				toast.error(errorMessage);
-
-				return false;
-			} finally {
-				setStatus((prev) => ({ ...prev, isDeleting: false }));
-			}
-		},
-		[
-			fetchReservations,
-			// fetchAllReservations
-		],
-	);
-
-	// 初期読み込み
-	useEffect(() => {
-		fetchReservations();
-	}, [fetchReservations]);
-
-	// 便宜上の複合状態
-	const isLoading =
-		status.isFetching ||
-		status.isCreating ||
-		status.isUpdating ||
-		status.isDeleting;
-	const error =
-		errors.fetchError ||
-		errors.createError ||
-		errors.updateError ||
-		errors.deleteError;
-
-	return {
-		// データ
-		reservations,
-		allReservations,
-
-		// 操作関数
-		fetchReservations,
-		fetchAllReservations,
-		createReservation,
-		updateReservation,
-		deleteReservation,
-
-		// 詳細な状態
-		status,
-		errors,
-
-		// 簡易状態 (従来のAPIとの互換性維持)
-		loading: isLoading,
-		error,
-		refreshReservations: fetchReservations,
-	};
+    // 状態
+    loading: apiState.loading,
+    error: apiState.error,
+  };
 }
